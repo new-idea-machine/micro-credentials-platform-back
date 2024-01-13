@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Untapped Energy Application
   description: An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.1.0"
+  version: "0.2.0"
 
 servers:
   - url: http://localhost:5001
@@ -26,9 +26,9 @@ paths:
       summary: Log a user in
       description: Log a user in.
       parameters:
-        - name: name
+        - name: email
           in: query
-          description: User name
+          description: User e-mail
           schema:
             type: string
           required: true
@@ -67,6 +67,8 @@ paths:
                   $ref: "#/components/schemas/UserInfo"
                 password:
                   type: string
+                isInstructor:
+                  type: boolean
       responses:
         "200":
           description: User successfully added.
