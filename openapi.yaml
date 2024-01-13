@@ -1,0 +1,203 @@
+openapi: 3.0.0
+info:
+  title: Untapped Energy Application
+  description: An application for better support of the ongoing learning initiatives of Untapped Energy.
+  version: "0.1.0"
+
+servers:
+  - url: http://localhost:5001
+    description: Local host
+
+paths:
+  /:
+    get:
+      summary: Detect server
+      description: Detect whether the server is running or not.
+      responses:
+        "200":
+          description: Server is running.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /user:
+    get:
+      summary: Log a user in
+      description: Log a user in.
+      parameters:
+        - name: name
+          in: query
+          description: User name
+          schema:
+            type: string
+          required: true
+        - name: password
+          in: query
+          description: User password
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: User logged in.
+          content:
+            text/html:
+              schema:
+                $ref: "#/components/schemas/UserInfo"
+        "404":
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+
+    post:
+      summary: Add a new user.
+      description: Add a new user to the system.
+      requestBody:
+        description: Details of the user to be added.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userInfo:
+                  $ref: "#/components/schemas/UserInfo"
+                password:
+                  type: string
+      responses:
+        "200":
+          description: User successfully added.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userUID:
+                    $ref: "#/components/schemas/UID"
+        "403":
+          description: User already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+
+  /user/{id}:
+    get:
+      summary: Return a specific user.
+      description: Returns information about the user identified by {id}.
+      parameters:
+        - name: id
+          in: path
+          description: User UID
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfo"
+        "404":
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+    patch:
+      summary: Update a specific user.
+      description: Update information about the user identified by {id}.
+      parameters:
+        - name: id
+          in: path
+          description: User UID
+          schema:
+            type: string
+          required: true
+      requestBody:
+        description: Updated details of the user.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInfo"
+      responses:
+        "200":
+          description: User successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "403":
+          description: Request denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "404":
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+    delete:
+      summary: Delete a specific user.
+      description: Removes the user identified by {id} from the system (as well as any related data).
+      parameters:
+        - name: id
+          in: path
+          description: User UID
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: User successfully deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "403":
+          description: Request denied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "404":
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+
+components:
+  schemas:
+    UserInfo:
+      type: object
+      properties:
+        userUID:
+          $ref: "#/components/schemas/UID"
+        name:
+          type: string
+        email:
+          type: string
+      required:
+        - name
+        - email
+
+    UID:
+      oneOf:
+      - type: integer
+      - type: string
+
+    ServerMessage:
+      type: object
+      properties:
+        msg:
+          type: string
+      required:
+        - msg
