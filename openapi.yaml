@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Untapped Energy Application
   description: An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.2.0"
+  version: "0.3.0"
 
 servers:
   - url: http://localhost:5001
@@ -51,6 +51,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
+        "406":
+          description: Invalid data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "503":
+          description: Can't connect to database.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
 
     post:
       summary: Add a new user.
@@ -70,7 +82,7 @@ paths:
                 isInstructor:
                   type: boolean
       responses:
-        "200":
+        "201":
           description: User successfully added.
           content:
             application/json:
@@ -81,6 +93,18 @@ paths:
                     $ref: "#/components/schemas/UID"
         "403":
           description: User already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "406":
+          description: Invalid data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "503":
+          description: Can't connect to database.
           content:
             application/json:
               schema:
@@ -110,6 +134,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
+        "406":
+          description: Invalid data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "503":
+          description: Can't connect to database.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+
     patch:
       summary: Update a specific user.
       description: Update information about the user identified by {id}.
@@ -146,6 +183,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
+        "406":
+          description: Invalid data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "503":
+          description: Can't connect to database.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+
     delete:
       summary: Delete a specific user.
       description: Removes the user identified by {id} from the system (as well as any related data).
@@ -171,6 +221,18 @@ paths:
                 $ref: "#/components/schemas/ServerMessage"
         "404":
           description: User not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "406":
+          description: Invalid data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "503":
+          description: Can't connect to database.
           content:
             application/json:
               schema:
