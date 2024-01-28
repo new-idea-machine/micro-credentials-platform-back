@@ -12,7 +12,7 @@ const app = express();
 
 console.log(`Connected to ${connectionString}`);
 
-const userSchema = mongoose.Schema({ username: String, email: String });
+const userSchema = mongoose.Schema({ username: String, email: String, UID: String, password: String });
 const userModel = database.model("users", userSchema);
 const users = await userModel.find();
 
@@ -33,17 +33,19 @@ app.get("/", async (req, res) => {
 })
 
 app.post("/user", async (req, res) => {
-    const user = req.body.userInfo
+    const user = req.body
     //console.log(user)
-    console.log(users)
+    console.log(user)
     const takenUsername = await userModel.findOne({ username: user.name })
-    //const takenEmail = await userModel.findOne({ email: user.email })
+    const takenEmail = await userModel.findOne({ email: user.email })
     if (takenEmail || takenUsername) {
-        res.sendStatus(400)
+        res.sendStatus(403)
     } else {
         const registrant = new userModel({
-            username: user.name,
-            email: user.email
+            username: user.userInfo.name,
+            email: user.userInfo.email,
+            UID: user.userInfo.userUID,
+            password: user.password
         })
         registrant.save()
         res.sendStatus(200)
@@ -52,7 +54,7 @@ app.post("/user", async (req, res) => {
 
 
 app.delete("/", async (req, res) => {
-    await userModel.deleteOne({ username: 'Test Learner User' }).then((user) => {
+    await userModel.deleteMany({}).then((user) => {
         if (!user) {
             res.status(400).send(req.params.Username + ' was not found');
         } else {
