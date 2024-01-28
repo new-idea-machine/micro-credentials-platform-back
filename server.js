@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express"
 import bodyParser from "body-parser"
 import cors from "cors"
+import validator from 'validator';
 
 dotenv.config({ path: "./config.env" });
 
@@ -32,23 +33,27 @@ app.get("/", async (req, res) => {
     res.json({ message: "Success" })
 })
 
+//still need custom validator for uid, turned to string for now
 app.post("/user", async (req, res) => {
     const user = req.body
-    //console.log(user)
     console.log(user)
-    const takenUsername = await userModel.findOne({ username: user.name })
-    const takenEmail = await userModel.findOne({ email: user.email })
+    const validEmail = validator.isEmail(user.userInfo.email)
+    const takenUsername = await userModel.findOne({ username: user.userInfo.name })
+    const takenEmail = await userModel.findOne({ email: user.userInfo.email })
     if (takenEmail || takenUsername) {
         res.sendStatus(403)
-    } else {
+    } else if (!validEmail) {
+        res.sendStatus(406)
+    }
+    else {
         const registrant = new userModel({
             username: user.userInfo.name,
             email: user.userInfo.email,
-            UID: user.userInfo.userUID,
+            UID: user.userInfo.userUID.toString(),
             password: user.password
         })
         registrant.save()
-        res.sendStatus(200)
+        res.sendStatus(201)
     }
 })
 
