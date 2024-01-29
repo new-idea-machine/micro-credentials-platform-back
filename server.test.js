@@ -38,7 +38,7 @@ const learnerUserData = {
 
 /*****************************************************************************/
 
-async function sendRequest(data, response, result) {
+async function sendRequest(data) {
   const options = {
     method: "POST",
     mode: "cors",
@@ -46,14 +46,17 @@ async function sendRequest(data, response, result) {
     body: JSON.stringify(data)
   };
 
+  let response = null;
+  let result = null;
+
   try {
     response = await fetch(`${serverURL}/user`, options);
-    result = await response.json();
+    result = (response?.bodyUsed ? await response.json() : null);
   }
   catch(error) {
   }
 
-  return;
+  return [response, result];
 }
 
 // ============================================================================
@@ -61,20 +64,17 @@ async function sendRequest(data, response, result) {
 // ============================================================================
 
 test("Register New Learner User (Bad E-mail Address)", async function() {
-  const badData = {...learnerUserData};
-
   /*
   TEST 1:  Register a new learner user with a bad e-mail address.
 
   EXPECTED RESULT:  Fail (status 406).
   */
 
+  const badData = structuredClone(learnerUserData);
+
   badData.userInfo.email = "Bad e-mail address";
 
-  let response = null;
-  let result = null;
-
-  sendRequest(badData, response, result);
+  const [response, result] = await sendRequest(badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -85,20 +85,17 @@ test("Register New Learner User (Bad E-mail Address)", async function() {
 /*****************************************************************************/
 
 test("Register New Learner User (Bad Password)", async function() {
-  const badData = {...learnerUserData};
-
   /*
   TEST 2:  Register a new learner user with a bad password.
 
   EXPECTED RESULT:  Fail (status 406).
   */
 
+  const badData    = structuredClone(learnerUserData);
+
   badData.password = null;
 
-  let response = null;
-  let result = null;
-
-  sendRequest(badData, response, result);
+  const [response, result] = await sendRequest(badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -115,10 +112,7 @@ test("Register New Learner User", async function() {
   EXPECTED RESULT:  Success (status 201).
   */
 
-  let response = null;
-  let result = null;
-
-  sendRequest(learnerUserData, response, result);
+  const [response, result] = await sendRequest(learnerUserData);
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
@@ -135,10 +129,7 @@ test("Re-Register New Learner User", async function() {
   EXPECTED RESULT:  Fail (status 403).
   */
 
-  let response = null;
-  let result = null;
-
-  sendRequest(learnerUserData, response, result);
+  const [response, result] = await sendRequest(learnerUserData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(403);
