@@ -255,8 +255,8 @@ components:
 
     UID:
       oneOf:
-      - type: integer
-      - type: string
+        - type: integer
+        - type: string
 
     ServerMessage:
       type: object

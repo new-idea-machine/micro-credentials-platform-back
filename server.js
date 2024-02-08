@@ -13,7 +13,7 @@ const app = express();
 
 console.log(`Connected to ${connectionString}`);
 
-const userSchema = mongoose.Schema({ username: String, email: String, UID: String, password: String });
+const userSchema = mongoose.Schema({ username: String, email: String, password: String, userUID: String, isInstructor: { type: Boolean, default: false } });
 const userModel = database.model("users", userSchema);
 const users = await userModel.find();
 
@@ -36,24 +36,25 @@ app.get("/", async (req, res) => {
 //still need custom validator for uid, turned to string for now
 app.post("/user", async (req, res) => {
     const user = req.body
-    console.log(user)
     const validEmail = validator.isEmail(user.userInfo.email)
     const takenUsername = await userModel.findOne({ username: user.userInfo.name })
     const takenEmail = await userModel.findOne({ email: user.userInfo.email })
     if (takenEmail || takenUsername) {
-        res.sendStatus(403)
+        res.status(403).send('test')
     } else if (!validEmail) {
-        res.sendStatus(406)
+        res.status(406).send('test')
+    } else if (!user.password) {
+        res.status(406).send('test')
     }
     else {
         const registrant = new userModel({
             username: user.userInfo.name,
             email: user.userInfo.email,
-            UID: user.userInfo.userUID.toString(),
-            password: user.password
+            password: user.password,
+            isInstructor: user.isInstructor
         })
-        registrant.save()
-        res.sendStatus(201)
+        const newDocument = await registrant.save()
+        res.status(201).json({ userUID: newDocument._id })
     }
 })
 
