@@ -37,9 +37,8 @@ app.get("/", async (req, res) => {
 app.post("/user", async (req, res) => {
     const user = req.body
     const validEmail = validator.isEmail(user.userInfo.email)
-    const takenUsername = await userModel.findOne({ username: user.userInfo.name })
     const takenEmail = await userModel.findOne({ email: user.userInfo.email })
-    if (takenEmail || takenUsername) {
+    if (takenEmail) {
         res.status(403).json({msg:'test'})
     } else if (!validEmail) {
         res.status(406).json({msg:'test'})
