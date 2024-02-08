@@ -51,7 +51,12 @@ async function sendRequest(data) {
 
   try {
     response = await fetch(`${serverURL}/user`, options);
-    result = (response?.bodyUsed ? await response.json() : null);
+
+    try {
+      result = await response.json();
+    }
+    catch(error) {
+    }
   }
   catch(error) {
   }
