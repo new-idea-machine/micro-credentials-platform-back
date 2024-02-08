@@ -40,11 +40,11 @@ app.post("/user", async (req, res) => {
     const takenUsername = await userModel.findOne({ username: user.userInfo.name })
     const takenEmail = await userModel.findOne({ email: user.userInfo.email })
     if (takenEmail || takenUsername) {
-        res.status(403).send('test')
+        res.status(403).json({msg:'test'})
     } else if (!validEmail) {
-        res.status(406).send('test')
+        res.status(406).json({msg:'test'})
     } else if (!user.password) {
-        res.status(406).send('test')
+        res.status(406).json({msg:'test'})
     }
     else {
         const registrant = new userModel({
