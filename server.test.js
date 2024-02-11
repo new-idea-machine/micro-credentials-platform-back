@@ -24,7 +24,7 @@ used:
   console.assert(port?.length > 0, "Server port not specified -- add \"PORT=<port>\" to .env");
 */
 
-const port      = "5001";                     // MUST match the setting in .env
+const port      = "5001";                                     // MUST match the setting in .env
 const serverURL = `http://localhost:${port}`;
 
 const learnerUserData = {
@@ -36,9 +36,19 @@ const learnerUserData = {
   isInstructor:  false
 };
 
-/*****************************************************************************/
+/*********************************************************************************************/
 
 async function sendRequest(data) {
+  /*
+  Handle all of the communication with the server.
+
+  "data" is the object to be converted to a JSON string and sent as the body of the request.
+
+  Return an array consisting of a "Response" object (or null if there was no response from the
+  server) and the JSON object from the response's body (or null if the response's body didn't
+  contain a JSON string).
+  */
+
   const options = {
     method: "POST",
     mode: "cors",
@@ -46,8 +56,14 @@ async function sendRequest(data) {
     body: JSON.stringify(data)
   };
 
-  let response = null;
-  let result = null;
+  let response = null;                       // the response from the server (if any)
+  let result = null;                         // the JSON object in the response's body (if any)
+
+  /*
+  "try-catch" blocks are used to handle the cases where there's no response from the server or
+  the server's body doesn't contain a JSON object string ("await" will throw exceptions in
+  these cases).
+  */
 
   try {
     response = await fetch(`${serverURL}/user`, options);
@@ -64,9 +80,9 @@ async function sendRequest(data) {
   return [response, result];
 }
 
-// ============================================================================
+// ============================================================================================
 // USER POST TESTS
-// ============================================================================
+// ============================================================================================
 
 test("Register New Learner User (Bad E-mail Address)", async function() {
   /*
@@ -87,7 +103,7 @@ test("Register New Learner User (Bad E-mail Address)", async function() {
   expect(typeof result?.userUID).toBe("undefined");
 });
 
-/*****************************************************************************/
+/*********************************************************************************************/
 
 test("Register New Learner User (Bad Password)", async function() {
   /*
@@ -108,7 +124,7 @@ test("Register New Learner User (Bad Password)", async function() {
   expect(typeof result?.userUID).toBe("undefined");
 });
 
-/*****************************************************************************/
+/*********************************************************************************************/
 
 test("Register New Learner User", async function() {
   /*
@@ -125,7 +141,7 @@ test("Register New Learner User", async function() {
   expect(typeof result?.msg).toBe("undefined");
 });
 
-/*****************************************************************************/
+/*********************************************************************************************/
 
 test("Re-Register New Learner User", async function() {
   /*
