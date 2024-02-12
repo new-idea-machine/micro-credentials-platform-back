@@ -4,16 +4,18 @@ import express from "express"
 import bodyParser from "body-parser"
 import cors from "cors"
 import validator from 'validator';
-
-dotenv.config({ path: "./config.env" });
-
+dotenv.config()
 const connectionString = process.env.MONGO_URL
 const database = await mongoose.connect(connectionString);
 const app = express();
 
 console.log(`Connected to ${connectionString}`);
 
-const userSchema = mongoose.Schema({ username: String, email: String, password: String, userUID: String, isInstructor: { type: Boolean, default: false } });
+const userSchema = mongoose.Schema({ 
+    username: String, 
+    email: String, 
+    password: String, 
+    isInstructor: { type: Boolean, default: false } });
 const userModel = database.model("users", userSchema);
 const users = await userModel.find();
 
@@ -33,7 +35,6 @@ app.get("/", async (req, res) => {
     res.json({ message: "Success" })
 })
 
-//still need custom validator for uid, turned to string for now
 app.post("/user", async (req, res) => {
     const user = req.body
     const validEmail = validator.isEmail(user.userInfo.email)
