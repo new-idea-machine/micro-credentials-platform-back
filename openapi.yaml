@@ -17,9 +17,15 @@ paths:
         "200":
           description: Server is running.
           content:
-            text/html:
+            application/json:
               schema:
-                type: string
+                $ref: "#/components/schemas/ServerMessage"
+        "503":
+          description: Can't connect to database.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
 
   /user:
     get:
