@@ -4,7 +4,9 @@ import express from "express"
 import bodyParser from "body-parser"
 import cors from "cors"
 import validator from 'validator';
+
 dotenv.config()
+
 const connectionString = process.env.MONGO_URL
 const database = await mongoose.connect(connectionString);
 const app = express();
@@ -15,36 +17,47 @@ const userSchema = mongoose.Schema({
     username: String, 
     email: String, 
     password: String, 
-    isInstructor: { type: Boolean, default: false } });
+    learnerData: {},
+    instructorData: {}
+});
+const learnerSchema = mongoose.Schema({});
+const instructorSchema = mongoose.Schema({});
+
 const userModel = database.model("users", userSchema);
+const learnerModel = database.model("learner", learnerSchema);
+const instructorModel = database.model("instructor", instructorSchema);
+
 const users = await userModel.find();
 
-
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
-app.use(bodyParser.json(), urlencodedParser)
-app.use(cors())
-
+app.use(bodyParser.json(), urlencodedParser);
+app.use(cors());
 
 app.listen(process.env.PORT, () => {
     console.log(`App is Listening on PORT ${process.env.PORT}`)
-})
+});
 
 app.get("/", async (req, res) => {
+    try {
     const users2 = await userModel.find();
     console.log(users2)
-    res.json({ message: "Success" })
-})
+    res.json({ message: "Success" })}
+    catch (error) {
+        res.status(503).json({msg:'Cant reach server'})
+    }
+});
 
 app.post("/user", async (req, res) => {
+    try{
     const user = req.body
     const validEmail = validator.isEmail(user.userInfo.email)
     const takenEmail = await userModel.findOne({ email: user.userInfo.email })
     if (takenEmail) {
-        res.status(403).json({msg:'test'})
+        res.status(403).json({msg:'User already exists (try logging in instead)'})
     } else if (!validEmail) {
-        res.status(406).json({msg:'test'})
+        res.status(406).json({msg:'Invalid e-mail address'})
     } else if (!user.password) {
-        res.status(406).json({msg:'test'})
+        res.status(406).json({msg:'Invalid password'})
     }
     else {
         const registrant = new userModel({
@@ -55,10 +68,13 @@ app.post("/user", async (req, res) => {
         })
         const newDocument = await registrant.save()
         res.status(201).json({ userUID: newDocument._id })
+    }}
+    catch (error) {
+        res.status(503).json({msg:'Cant reach server'})
     }
-})
+});
 
-
+//Currently empties database, will change to only delete one user when done
 app.delete("/", async (req, res) => {
     await userModel.deleteMany({}).then((user) => {
         if (!user) {
@@ -71,6 +87,6 @@ app.delete("/", async (req, res) => {
             console.error(err);
             res.status(500).send('Error: ' + err);
         });
-})
+});
 
 console.log(users);
