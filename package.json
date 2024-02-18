@@ -1,9 +1,9 @@
 {
+  "type": "module",
   "name": "micro-credentials-platform-back",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "test": "jest"
   },
@@ -13,8 +13,9 @@
   "dependencies": {
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.2",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "mongoose": "^8.1.0"
+    "mongoose": "^8.1.0",
+    "validator": "^13.11.0"
   }
 }
