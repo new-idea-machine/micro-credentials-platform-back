@@ -50,6 +50,29 @@ app.get("/", async (req, res) => {
     }
 });
 
+app.get("/user", async (req, res) => {
+    try
+    {
+        const user = await userModel.findOne({ email: req.body.email })
+        const password = req.body.password
+        console.log(user)
+        if (!user)
+        {
+            res.status(404).json({ msg: 'User not found.' })
+        } else if (password !== user.password)
+        {
+            res.status(403).json({ msg: 'Incorrect password.' })
+        } else
+        {
+            res.status(200).json({ msg: 'User logged in.' })
+        }
+    }
+    catch (error)
+    {
+        res.status(503).json({ msg: 'Cant reach server' })
+    }
+});
+
 app.post("/user", async (req, res) => {
     try
     {
