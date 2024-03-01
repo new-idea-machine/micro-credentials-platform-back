@@ -101,3 +101,9 @@ app.delete("/", async (req, res) => {
             res.status(500).send('Error: ' + err);
         });
 });
+
+//Change the default response for unhandled requests to status code 400
+app.use((req, res) => {
+    console.log(`Unhandled request:  ${req.method} ${req.url}`);
+    res.status(400).json({msg: "Request not handled"});
+  });
