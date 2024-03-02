@@ -72,7 +72,7 @@ async function sendRequest(method, data = null) {
       options.body = JSON.stringify(data);
     }
     else {
-      parameters = "/" + data
+      parameters = "?" + data
     }
   }
 
