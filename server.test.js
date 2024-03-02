@@ -14,7 +14,7 @@ User GET Tests
 ---------------
 
 1. Get the same user as above.
-2. Get the same user using a bad password.
+2. Get the same user using the wrong password.
 3. Get a non-existent user.
 */
 
@@ -100,6 +100,17 @@ async function sendRequest(method, data = null) {
   return [response, result];
 }
 
+/*********************************************************************************************/
+
+function isAValidUID(UID) {
+  /*
+  Check to see if "UID" is a valid user identification.
+
+  Return true if it is and false if it isn't.
+  */
+
+  return (typeof UID === "string") || (typeof UID === "number");
+}
 // ============================================================================================
 // USER POST TESTS
 // ============================================================================================
@@ -157,7 +168,7 @@ test("Register New Learner User", async function() {
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
-  expect(["string", "number"].indexOf(typeof result?.userUID)).toBeGreaterThanOrEqual(0);
+  expect(isAValidUID(result?.userUID)).toBe(true);
   expect(typeof result?.msg).toBe("undefined");
 });
 
@@ -189,17 +200,53 @@ test("Get the Same User", async function() {
   EXPECTED RESULT:  Success (status 400).
   */
 
-  const data = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
-               `password=${encodeURIComponent(learnerUserData.password)}`;
+  const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
+                `password=${encodeURIComponent(learnerUserData.password)}`;
 
-  const [response, result] = await sendRequest("GET", data);
+  const [response, result] = await sendRequest("GET", query);
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
-  expect(["string", "number"].indexOf(typeof result?.userUID)).toBeGreaterThanOrEqual(0);
+  expect(isAValidUID(result?.userUID)).toBe(true);
+  expect(result?.name === learnerUserData.userInfo.name);
+  expect(result?.email === learnerUserData.userInfo.email);
   expect(typeof result?.msg).toBe("undefined");
-  expect(result.email === learnerUserData.userInfo.email);
 });
 
 /*********************************************************************************************/
 
+test("Get the Same User Using Wrong Password", async function() {
+  /*
+  TEST 2:  Get the same user using the wrong password.
+
+  EXPECTED RESULT:  Fail (status 403).
+  */
+
+  const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
+                `password=${encodeURIComponent("wrong_password")}`;
+
+  const [response, result] = await sendRequest("GET", query);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(403);
+  expect(typeof result?.msg).toBe("string");
+});
+
+/*********************************************************************************************/
+
+test("Get a Non-Existent User", async function() {
+  /*
+  TEST 3:  Get a non-existent user.
+
+  EXPECTED RESULT:  Fail (status 404).
+  */
+
+  const query = `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
+                `password=${encodeURIComponent(learnerUserData.password)}`;
+
+  const [response, result] = await sendRequest("GET", query);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(404);
+  expect(typeof result?.msg).toBe("string");
+});
