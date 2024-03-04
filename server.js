@@ -53,18 +53,19 @@ app.get("/", async (req, res) => {
 app.get("/user", async (req, res) => {
     try
     {
-        const user = await userModel.findOne({ email: req.body.email })
-        const password = req.body.password
-        console.log(user)
+        const user = await userModel.findOne({ email: req.query.email })
+        const password = req.query.password
         if (!user)
         {
             res.status(404).json({ msg: 'User not found.' })
-        } else if (password !== user.password)
+        }
+        else if (password !== user.password)
         {
             res.status(403).json({ msg: 'Incorrect password.' })
-        } else
+        }
+        else
         {
-            res.status(200).json({ msg: 'User logged in.' })
+            res.status(200).json({ userUID: user._id })
         }
     }
     catch (error)
@@ -124,3 +125,4 @@ app.delete("/", async (req, res) => {
             res.status(500).send('Error: ' + err);
         });
 });
+
