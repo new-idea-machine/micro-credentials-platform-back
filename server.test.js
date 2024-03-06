@@ -197,7 +197,7 @@ test("Get the Same User", async function() {
   /*
   TEST 1:  Get the same user as above.
 
-  EXPECTED RESULT:  Success (status 400).
+  EXPECTED RESULT:  Success (status 200).
   */
 
   const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
@@ -208,8 +208,8 @@ test("Get the Same User", async function() {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(isAValidUID(result?.userUID)).toBe(true);
-  expect(result?.name === learnerUserData.userInfo.name);
-  expect(result?.email === learnerUserData.userInfo.email);
+  expect(result?.name).toBe(learnerUserData.userInfo.name);
+  expect(result?.email).toBe(learnerUserData.userInfo.email);
   expect(typeof result?.msg).toBe("undefined");
 });
 
