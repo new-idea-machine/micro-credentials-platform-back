@@ -55,6 +55,7 @@ app.get("/user", async (req, res) => {
     {
         const user = await userModel.findOne({ email: req.query.email })
         const password = req.query.password
+        console.log(user)
         if (!user)
         {
             res.status(404).json({ msg: 'User not found.' })
@@ -65,7 +66,7 @@ app.get("/user", async (req, res) => {
         }
         else
         {
-            res.status(200).json({ userUID: user._id })
+            res.status(200).json({ userUID: user._id, name: user.username, email: user.email })
         }
     }
     catch (error)
