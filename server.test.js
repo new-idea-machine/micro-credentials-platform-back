@@ -31,7 +31,7 @@ used:
   console.assert(port?.length > 0, "Server port not specified -- add \"PORT=<port>\" to .env");
 */
 
-const port      = "5001";                                     // MUST match the setting in .env
+const port = "5001";                                     // MUST match the setting in .env
 const serverURL = `http://localhost:${port}`;
 
 const learnerUserData = {
@@ -40,7 +40,7 @@ const learnerUserData = {
     email: `learner_${Date.now()}@test.user`
   },
   password: "T35t^U$er",
-  isInstructor:  false
+  isInstructor: false
 };
 
 /*********************************************************************************************/
@@ -68,7 +68,7 @@ async function sendRequest(method, data = null) {
 
   if (data) {
     if (method !== "GET") {
-      options.headers = {"Content-Type": "application/json"};
+      options.headers = { "Content-Type": "application/json" };
       options.body = JSON.stringify(data);
     }
     else {
@@ -91,10 +91,10 @@ async function sendRequest(method, data = null) {
     try {
       result = await response.json();
     }
-    catch(error) {
+    catch (error) {
     }
   }
-  catch(error) {
+  catch (error) {
   }
 
   return [response, result];
@@ -115,7 +115,7 @@ function isAValidUID(UID) {
 // USER POST TESTS
 // ============================================================================================
 
-test("Register New Learner User (Bad E-mail Address)", async function() {
+test("Register New Learner User (Bad E-mail Address)", async function () {
   /*
   TEST 1:  Register a new learner user with a bad e-mail address.
 
@@ -136,14 +136,14 @@ test("Register New Learner User (Bad E-mail Address)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad Password)", async function() {
+test("Register New Learner User (Bad Password)", async function () {
   /*
   TEST 2:  Register a new learner user with a bad password.
 
   EXPECTED RESULT:  Fail (status 406).
   */
 
-  const badData    = structuredClone(learnerUserData);
+  const badData = structuredClone(learnerUserData);
 
   badData.password = null;
 
@@ -157,7 +157,7 @@ test("Register New Learner User (Bad Password)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User", async function() {
+test("Register New Learner User", async function () {
   /*
   TEST 3:  Register a new learner user.
 
@@ -174,7 +174,7 @@ test("Register New Learner User", async function() {
 
 /*********************************************************************************************/
 
-test("Re-Register New Learner User", async function() {
+test("Re-Register New Learner User", async function () {
   /*
   TEST 4:  Re-register the same learner.
 
@@ -193,7 +193,7 @@ test("Re-Register New Learner User", async function() {
 // USER GET TESTS
 // ============================================================================================
 
-test("Get the Same User", async function() {
+test("Get the Same User", async function () {
   /*
   TEST 1:  Get the same user as above.
 
@@ -201,7 +201,7 @@ test("Get the Same User", async function() {
   */
 
   const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
-                `password=${encodeURIComponent(learnerUserData.password)}`;
+    `password=${encodeURIComponent(learnerUserData.password)}`;
 
   const [response, result] = await sendRequest("GET", query);
 
@@ -215,7 +215,7 @@ test("Get the Same User", async function() {
 
 /*********************************************************************************************/
 
-test("Get the Same User Using Wrong Password", async function() {
+test("Get the Same User Using Wrong Password", async function () {
   /*
   TEST 2:  Get the same user using the wrong password.
 
@@ -223,7 +223,7 @@ test("Get the Same User Using Wrong Password", async function() {
   */
 
   const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
-                `password=${encodeURIComponent("wrong_password")}`;
+    `password=${encodeURIComponent("wrong_password")}`;
 
   const [response, result] = await sendRequest("GET", query);
 
@@ -234,7 +234,7 @@ test("Get the Same User Using Wrong Password", async function() {
 
 /*********************************************************************************************/
 
-test("Get a Non-Existent User", async function() {
+test("Get a Non-Existent User", async function () {
   /*
   TEST 3:  Get a non-existent user.
 
@@ -242,7 +242,7 @@ test("Get a Non-Existent User", async function() {
   */
 
   const query = `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
-                `password=${encodeURIComponent(learnerUserData.password)}`;
+    `password=${encodeURIComponent(learnerUserData.password)}`;
 
   const [response, result] = await sendRequest("GET", query);
 
