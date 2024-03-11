@@ -66,15 +66,12 @@ async function sendRequest(method, data = null) {
     mode: "cors"
   };
 
-  if (data)
-  {
-    if (method !== "GET")
-    {
+  if (data) {
+    if (method !== "GET") {
       options.headers = { "Content-Type": "application/json" };
       options.body = JSON.stringify(data);
     }
-    else
-    {
+    else {
       parameters = "?" + data
     }
   }
@@ -88,20 +85,16 @@ async function sendRequest(method, data = null) {
   these cases).
   */
 
-  try
-  {
+  try {
     response = await fetch(`${serverURL}/user${parameters}`, options);
 
-    try
-    {
+    try {
       result = await response.json();
     }
-    catch (error)
-    {
+    catch (error) {
     }
   }
-  catch (error)
-  {
+  catch (error) {
   }
 
   return [response, result];
