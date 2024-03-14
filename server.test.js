@@ -5,17 +5,26 @@ List of Tests
 User POST Tests
 ---------------
 
-1. Register a new learner user with a bad e-mail address.
-2. Register a new learner user with a bad password.
-3. Register a new learner user.
-4. Re-register the same learner user.
+ 1. Register a new learner user with a missing name.
+ 2. Register a new learner user with a bad name type.
+ 3. Register a new learner user with a bad name.
+ 4. Register a new learner user with a missing e-mail address.
+ 5. Register a new learner user with a bad e-mail address type.
+ 6. Register a new learner user with a bad e-mail address.
+ 7. Register a new learner user with a missing password.
+ 8. Register a new learner user with a bad password type.
+ 9. Register a new learner user with a bad password.
+10. Register a new learner user.
+11. Re-register the same learner user.
 
 User GET Tests
 ---------------
 
-1. Get the same user as above.
-2. Get the same user using the wrong password.
-3. Get a non-existent user.
+1. Get a user without an e-mail.
+2. Get a user without a password.
+3. Get an existing user.
+4. Get the same user using the wrong password.
+5. Get a non-existent user.
 */
 
 /*
@@ -115,9 +124,114 @@ function isAValidUID(UID) {
 // USER POST TESTS
 // ============================================================================================
 
+test("Register New Learner User (Missing Name)", async function() {
+  /*
+  TEST 1:  Register a new learner user with a missing name.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  delete badData.userInfo.name;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Learner User (Bad Name Type)", async function() {
+  /*
+  TEST 2:  Register a new learner user with a bad name type.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  badData.userInfo.name = {rose: badData.userInfo.name};
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Learner User (Bad Name)", async function() {
+  /*
+  TEST 3:  Register a new learner user with a bad name.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  badData.userInfo.name = "";
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Learner User (Missing E-mail Address)", async function() {
+  /*
+  TEST 4:  Register a new learner user with a missing e-mail address.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  delete badData.userInfo.email;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Learner User (Bad E-mail Address Type)", async function() {
+  /*
+  TEST 5:  Register a new learner user with a bad e-mail address.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  badData.userInfo.email = -1;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
 test("Register New Learner User (Bad E-mail Address)", async function() {
   /*
-  TEST 1:  Register a new learner user with a bad e-mail address.
+  TEST 6:  Register a new learner user with a bad e-mail address.
 
   EXPECTED RESULT:  Fail (status 406).
   */
@@ -136,16 +250,58 @@ test("Register New Learner User (Bad E-mail Address)", async function() {
 
 /*********************************************************************************************/
 
+test("Register New Learner User (Missing Password)", async function() {
+  /*
+  TEST 7:  Register a new learner user with a missing password.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  delete badData.password;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Learner User (Bad Password Type)", async function() {
+  /*
+  TEST 8:  Register a new learner user with a bad password type.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  badData.password = {error:  badData.password};
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
 test("Register New Learner User (Bad Password)", async function() {
   /*
-  TEST 2:  Register a new learner user with a bad password.
+  TEST 9:  Register a new learner user with a bad password.
 
   EXPECTED RESULT:  Fail (status 406).
   */
 
   const badData    = structuredClone(learnerUserData);
 
-  badData.password = null;
+  badData.password = "";
 
   const [response, result] = await sendRequest("POST", badData);
 
@@ -159,7 +315,7 @@ test("Register New Learner User (Bad Password)", async function() {
 
 test("Register New Learner User", async function() {
   /*
-  TEST 3:  Register a new learner user.
+  TEST 10:  Register a new learner user.
 
   EXPECTED RESULT:  Success (status 201).
   */
@@ -176,7 +332,7 @@ test("Register New Learner User", async function() {
 
 test("Re-Register New Learner User", async function() {
   /*
-  TEST 4:  Re-register the same learner.
+  TEST 11:  Re-register the same learner.
 
   EXPECTED RESULT:  Fail (status 403).
   */
@@ -193,9 +349,45 @@ test("Re-Register New Learner User", async function() {
 // USER GET TESTS
 // ============================================================================================
 
-test("Get the Same User", async function() {
+test("Get a User Without an E-mail", async function () {
   /*
-  TEST 1:  Get the same user as above.
+  TEST 1:  Get a user without an e-mail.
+
+  EXPECTED RESULT:  Success (status 406).
+  */
+
+  const query = `password=${encodeURIComponent(learnerUserData.password)}`;
+
+  const [response, result] = await sendRequest("GET", query);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+});
+
+/*********************************************************************************************/
+
+test("Get a User Without a Password", async function() {
+  /*
+  TEST 2:  Get a user without a password.
+
+  EXPECTED RESULT:  Success (status 406).
+  */
+
+  const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}`;
+
+  const [response, result] = await sendRequest("GET", query);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+});
+
+/*********************************************************************************************/
+
+test("Get an Existing User", async function() {
+  /*
+  TEST 3:  Get an existing user.
 
   EXPECTED RESULT:  Success (status 200).
   */
@@ -217,7 +409,7 @@ test("Get the Same User", async function() {
 
 test("Get the Same User Using Wrong Password", async function() {
   /*
-  TEST 2:  Get the same user using the wrong password.
+  TEST 4:  Get the same user using the wrong password.
 
   EXPECTED RESULT:  Fail (status 403).
   */
@@ -236,7 +428,7 @@ test("Get the Same User Using Wrong Password", async function() {
 
 test("Get a Non-Existent User", async function() {
   /*
-  TEST 3:  Get a non-existent user.
+  TEST 5:  Get a non-existent user.
 
   EXPECTED RESULT:  Fail (status 404).
   */
