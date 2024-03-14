@@ -20,8 +20,8 @@ User POST Tests
 User GET Tests
 ---------------
 
-1. Get a user without an e-mail.
-2. Get a user without a password.
+1. Get a user without providing an e-mail.
+2. Get a user without providing a password.
 3. Get an existing user.
 4. Get the same user using the wrong password.
 5. Get a non-existent user.
@@ -349,9 +349,9 @@ test("Re-Register New Learner User", async function() {
 // USER GET TESTS
 // ============================================================================================
 
-test("Get a User Without an E-mail", async function () {
+test("Get a User Without Providing an E-mail", async function () {
   /*
-  TEST 1:  Get a user without an e-mail.
+  TEST 1:  Get a user without providing an e-mail.
 
   EXPECTED RESULT:  Success (status 406).
   */
@@ -367,9 +367,9 @@ test("Get a User Without an E-mail", async function () {
 
 /*********************************************************************************************/
 
-test("Get a User Without a Password", async function() {
+test("Get a User Without Providing a Password", async function() {
   /*
-  TEST 2:  Get a user without a password.
+  TEST 2:  Get a user without providing a password.
 
   EXPECTED RESULT:  Success (status 406).
   */
