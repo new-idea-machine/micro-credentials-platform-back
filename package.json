@@ -3,7 +3,7 @@
   "name": "micro-credentials-platform-back",
   "version": "0.2.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "jest"
   },
@@ -17,5 +17,11 @@
     "express": "^4.18.2",
     "mongoose": "^8.1.0",
     "validator": "^13.11.0"
+  },
+  "prettier": {
+    "printWidth": 96,
+    "trailingComma": "none",
+    "endOfLine": "auto",
+    "embeddedLanguageFormatting": "off"
   }
 }
