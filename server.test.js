@@ -40,7 +40,7 @@ used:
   console.assert(port?.length > 0, "Server port not specified -- add \"PORT=<port>\" to .env");
 */
 
-const port      = "5001";                                     // MUST match the setting in .env
+const port = "5001"; // MUST match the setting in .env
 const serverURL = `http://localhost:${port}`;
 
 const learnerUserData = {
@@ -49,7 +49,7 @@ const learnerUserData = {
     email: `learner_${Date.now()}@test.user`
   },
   password: "T35t^U$er",
-  isInstructor:  false
+  isInstructor: false
 };
 
 /*********************************************************************************************/
@@ -77,16 +77,15 @@ async function sendRequest(method, data = null) {
 
   if (data) {
     if (method !== "GET") {
-      options.headers = {"Content-Type": "application/json"};
+      options.headers = { "Content-Type": "application/json" };
       options.body = JSON.stringify(data);
-    }
-    else {
-      parameters = "?" + data
+    } else {
+      parameters = "?" + data;
     }
   }
 
-  let response = null;                       // the response from the server (if any)
-  let result = null;                         // the JSON object in the response's body (if any)
+  let response = null; // the response from the server (if any)
+  let result = null; // the JSON object in the response's body (if any)
 
   /*
   "try-catch" blocks are used to handle the cases where there's no response from the server or
@@ -99,12 +98,8 @@ async function sendRequest(method, data = null) {
 
     try {
       result = await response.json();
-    }
-    catch(error) {
-    }
-  }
-  catch(error) {
-  }
+    } catch (error) {}
+  } catch (error) {}
 
   return [response, result];
 }
@@ -118,13 +113,13 @@ function isAValidUID(UID) {
   Return true if it is and false if it isn't.
   */
 
-  return (typeof UID === "string") || (typeof UID === "number");
+  return typeof UID === "string" || typeof UID === "number";
 }
 // ============================================================================================
 // USER POST TESTS
 // ============================================================================================
 
-test("Register New Learner User (Missing Name)", async function() {
+test("Register New Learner User (Missing Name)", async function () {
   /*
   TEST 1:  Register a new learner user with a missing name.
 
@@ -145,7 +140,7 @@ test("Register New Learner User (Missing Name)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad Name Type)", async function() {
+test("Register New Learner User (Bad Name Type)", async function () {
   /*
   TEST 2:  Register a new learner user with a bad name type.
 
@@ -154,7 +149,7 @@ test("Register New Learner User (Bad Name Type)", async function() {
 
   const badData = structuredClone(learnerUserData);
 
-  badData.userInfo.name = {rose: badData.userInfo.name};
+  badData.userInfo.name = { rose: badData.userInfo.name };
 
   const [response, result] = await sendRequest("POST", badData);
 
@@ -166,7 +161,7 @@ test("Register New Learner User (Bad Name Type)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad Name)", async function() {
+test("Register New Learner User (Bad Name)", async function () {
   /*
   TEST 3:  Register a new learner user with a bad name.
 
@@ -187,7 +182,7 @@ test("Register New Learner User (Bad Name)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Missing E-mail Address)", async function() {
+test("Register New Learner User (Missing E-mail Address)", async function () {
   /*
   TEST 4:  Register a new learner user with a missing e-mail address.
 
@@ -208,7 +203,7 @@ test("Register New Learner User (Missing E-mail Address)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad E-mail Address Type)", async function() {
+test("Register New Learner User (Bad E-mail Address Type)", async function () {
   /*
   TEST 5:  Register a new learner user with a bad e-mail address.
 
@@ -229,7 +224,7 @@ test("Register New Learner User (Bad E-mail Address Type)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad E-mail Address)", async function() {
+test("Register New Learner User (Bad E-mail Address)", async function () {
   /*
   TEST 6:  Register a new learner user with a bad e-mail address.
 
@@ -250,7 +245,7 @@ test("Register New Learner User (Bad E-mail Address)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Missing Password)", async function() {
+test("Register New Learner User (Missing Password)", async function () {
   /*
   TEST 7:  Register a new learner user with a missing password.
 
@@ -271,7 +266,7 @@ test("Register New Learner User (Missing Password)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad Password Type)", async function() {
+test("Register New Learner User (Bad Password Type)", async function () {
   /*
   TEST 8:  Register a new learner user with a bad password type.
 
@@ -280,7 +275,7 @@ test("Register New Learner User (Bad Password Type)", async function() {
 
   const badData = structuredClone(learnerUserData);
 
-  badData.password = {error:  badData.password};
+  badData.password = { error: badData.password };
 
   const [response, result] = await sendRequest("POST", badData);
 
@@ -292,14 +287,14 @@ test("Register New Learner User (Bad Password Type)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad Password)", async function() {
+test("Register New Learner User (Bad Password)", async function () {
   /*
   TEST 9:  Register a new learner user with a bad password.
 
   EXPECTED RESULT:  Fail (status 406).
   */
 
-  const badData    = structuredClone(learnerUserData);
+  const badData = structuredClone(learnerUserData);
 
   badData.password = "";
 
@@ -313,7 +308,7 @@ test("Register New Learner User (Bad Password)", async function() {
 
 /*********************************************************************************************/
 
-test("Register New Learner User", async function() {
+test("Register New Learner User", async function () {
   /*
   TEST 10:  Register a new learner user.
 
@@ -330,7 +325,7 @@ test("Register New Learner User", async function() {
 
 /*********************************************************************************************/
 
-test("Re-Register New Learner User", async function() {
+test("Re-Register New Learner User", async function () {
   /*
   TEST 11:  Re-register the same learner.
 
@@ -367,7 +362,7 @@ test("Get a User Without Providing an E-mail", async function () {
 
 /*********************************************************************************************/
 
-test("Get a User Without Providing a Password", async function() {
+test("Get a User Without Providing a Password", async function () {
   /*
   TEST 2:  Get a user without providing a password.
 
@@ -385,15 +380,16 @@ test("Get a User Without Providing a Password", async function() {
 
 /*********************************************************************************************/
 
-test("Get an Existing User", async function() {
+test("Get an Existing User", async function () {
   /*
   TEST 3:  Get an existing user.
 
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
-                `password=${encodeURIComponent(learnerUserData.password)}`;
+  const query =
+    `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
+    `password=${encodeURIComponent(learnerUserData.password)}`;
 
   const [response, result] = await sendRequest("GET", query);
 
@@ -407,15 +403,16 @@ test("Get an Existing User", async function() {
 
 /*********************************************************************************************/
 
-test("Get the Same User Using Wrong Password", async function() {
+test("Get the Same User Using Wrong Password", async function () {
   /*
   TEST 4:  Get the same user using the wrong password.
 
   EXPECTED RESULT:  Fail (status 403).
   */
 
-  const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
-                `password=${encodeURIComponent("wrong_password")}`;
+  const query =
+    `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
+    `password=${encodeURIComponent("wrong_password")}`;
 
   const [response, result] = await sendRequest("GET", query);
 
@@ -426,15 +423,16 @@ test("Get the Same User Using Wrong Password", async function() {
 
 /*********************************************************************************************/
 
-test("Get a Non-Existent User", async function() {
+test("Get a Non-Existent User", async function () {
   /*
   TEST 5:  Get a non-existent user.
 
   EXPECTED RESULT:  Fail (status 404).
   */
 
-  const query = `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
-                `password=${encodeURIComponent(learnerUserData.password)}`;
+  const query =
+    `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
+    `password=${encodeURIComponent(learnerUserData.password)}`;
 
   const [response, result] = await sendRequest("GET", query);
 
