@@ -14,17 +14,34 @@ User POST Tests
  7. Register a new learner user with a missing password.
  8. Register a new learner user with a bad password type.
  9. Register a new learner user with a bad password.
-10. Register a new learner user.
-11. Re-register the same learner user.
+10. Register a new learner user with a missing user type.
+11. Register a new learner user with a bad user type.
+12. Register a new learner user.
+13. Re-register the same learner user.
+14. Register a new instructor user with a missing name.
+15. Register a new instructor user with a bad name type.
+16. Register a new instructor user with a bad name.
+17. Register a new instructor user with a missing e-mail address.
+18. Register a new instructor user with a bad e-mail address type.
+19. Register a new instructor user with a bad e-mail address.
+20. Register a new instructor user with a missing password.
+21. Register a new instructor user with a bad password type.
+22. Register a new instructor user with a bad password.
+23. Register a new instructor user with a missing user type.
+24. Register a new instructor user with a bad user type.
+25. Register a new instructor user.
+26. Re-register the same instructor user.
 
 User GET Tests
 ---------------
 
-1. Get a user without providing an e-mail.
-2. Get a user without providing a password.
-3. Get an existing user.
-4. Get the same user using the wrong password.
-5. Get a non-existent user.
+ 1. Get a user without providing an e-mail.
+ 2. Get a user without providing a password.
+ 3. Get a non-existent user.
+ 4. Get an existing learner user.
+ 5. Get the same learner user using the wrong password.
+ 6. Get an existing instructor user.
+ 7. Get the same instructor user using the wrong password.
 */
 
 /*
@@ -50,6 +67,15 @@ const learnerUserData = {
   },
   password: "T35t^U$er",
   isInstructor: false
+};
+
+const instructorUserData = {
+  userInfo: {
+    name: "Test Instructor User",
+    email: `instructor_${Date.now()}@test.user`
+  },
+  password: "T35t^U$er",
+  isInstructor: true
 };
 
 /*********************************************************************************************/
@@ -308,9 +334,51 @@ test("Register New Learner User (Bad Password)", async function () {
 
 /*********************************************************************************************/
 
+test("Register New Learner User (Missing User Type)", async function () {
+  /*
+  TEST 10:  Register a new learner user with a bad password.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  delete badData.isInstructor;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Learner User (Bad User Type)", async function () {
+  /*
+  TEST 11:  Register a new learner user with a bad user type.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(learnerUserData);
+
+  badData.isInstructor = 42;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
 test("Register New Learner User", async function () {
   /*
-  TEST 10:  Register a new learner user.
+  TEST 12:  Register a new learner user.
 
   EXPECTED RESULT:  Success (status 201).
   */
@@ -327,12 +395,277 @@ test("Register New Learner User", async function () {
 
 test("Re-Register New Learner User", async function () {
   /*
-  TEST 11:  Re-register the same learner.
+  TEST 13:  Re-register the same learner.
 
   EXPECTED RESULT:  Fail (status 403).
   */
 
   const [response, result] = await sendRequest("POST", learnerUserData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(403);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Missing Name)", async function () {
+  /*
+  TEST 14:  Register a new instructor user with a missing name.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  delete badData.userInfo.name;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Bad Name Type)", async function () {
+  /*
+  TEST 15:  Register a new instructor user with a bad name type.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  badData.userInfo.name = { rose: badData.userInfo.name };
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Bad Name)", async function () {
+  /*
+  TEST 16:  Register a new instructor user with a bad name.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  badData.userInfo.name = "";
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Missing E-mail Address)", async function () {
+  /*
+  TEST 17:  Register a new instructor user with a missing e-mail address.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  delete badData.userInfo.email;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Bad E-mail Address Type)", async function () {
+  /*
+  TEST 18:  Register a new instructor user with a bad e-mail address.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  badData.userInfo.email = -1;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Bad E-mail Address)", async function () {
+  /*
+  TEST 19:  Register a new instructor user with a bad e-mail address.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  badData.userInfo.email = "Bad e-mail address";
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Missing Password)", async function () {
+  /*
+  TEST 20:  Register a new instructor user with a missing password.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  delete badData.password;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Bad Password Type)", async function () {
+  /*
+  TEST 21:  Register a new instructor user with a bad password type.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  badData.password = { error: badData.password };
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Bad Password)", async function () {
+  /*
+  TEST 22:  Register a new instructor user with a bad password.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  badData.password = "";
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Missing User Type)", async function () {
+  /*
+  TEST 23:  Register a new instructor user with a bad password.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  delete badData.isInstructor;
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User (Bad User Type)", async function () {
+  /*
+  TEST 24:  Register a new instructor user with a bad user type.
+
+  EXPECTED RESULT:  Fail (status 406).
+  */
+
+  const badData = structuredClone(instructorUserData);
+
+  badData.isInstructor = { professor: "Ned Brainard" };
+
+  const [response, result] = await sendRequest("POST", badData);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.userUID).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Register New Instructor User", async function () {
+  /*
+  TEST 25:  Register a new instructor user.
+
+  EXPECTED RESULT:  Success (status 201).
+  */
+
+  const [response, result] = await sendRequest("POST", instructorUserData);
+
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(201);
+  expect(isAValidUID(result?.userUID)).toBe(true);
+  expect(typeof result?.msg).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Re-Register New Instructor User", async function () {
+  /*
+  TEST 26:  Re-register the same instructor.
+
+  EXPECTED RESULT:  Fail (status 403).
+  */
+
+  const [response, result] = await sendRequest("POST", instructorUserData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(403);
@@ -348,7 +681,7 @@ test("Get a User Without Providing an E-mail", async function () {
   /*
   TEST 1:  Get a user without providing an e-mail.
 
-  EXPECTED RESULT:  Success (status 406).
+  EXPECTED RESULT:  Fail (status 406).
   */
 
   const query = `password=${encodeURIComponent(learnerUserData.password)}`;
@@ -366,7 +699,7 @@ test("Get a User Without Providing a Password", async function () {
   /*
   TEST 2:  Get a user without providing a password.
 
-  EXPECTED RESULT:  Success (status 406).
+  EXPECTED RESULT:  Fail (status 406).
   */
 
   const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}`;
@@ -380,9 +713,29 @@ test("Get a User Without Providing a Password", async function () {
 
 /*********************************************************************************************/
 
-test("Get an Existing User", async function () {
+test("Get a Non-Existent Learner User", async function () {
   /*
-  TEST 3:  Get an existing user.
+  TEST 3:  Get a non-existent learner User.
+
+  EXPECTED RESULT:  Fail (status 404).
+  */
+
+  const query =
+    `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
+    `password=${encodeURIComponent(learnerUserData.password)}`;
+
+  const [response, result] = await sendRequest("GET", query);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(404);
+  expect(typeof result?.msg).toBe("string");
+});
+
+/*********************************************************************************************/
+
+test("Get an Existing Learner User", async function () {
+  /*
+  TEST 4:  Get an existing learner User.
 
   EXPECTED RESULT:  Success (status 200).
   */
@@ -403,9 +756,9 @@ test("Get an Existing User", async function () {
 
 /*********************************************************************************************/
 
-test("Get the Same User Using Wrong Password", async function () {
+test("Get the Same Learner User Using Wrong Password", async function () {
   /*
-  TEST 4:  Get the same user using the wrong password.
+  TEST 5:  Get the same learner User using the wrong password.
 
   EXPECTED RESULT:  Fail (status 403).
   */
@@ -423,20 +776,43 @@ test("Get the Same User Using Wrong Password", async function () {
 
 /*********************************************************************************************/
 
-test("Get a Non-Existent User", async function () {
+test("Get an Existing Instructor User", async function () {
   /*
-  TEST 5:  Get a non-existent user.
+  TEST 6:  Get an existing instructor user.
 
-  EXPECTED RESULT:  Fail (status 404).
+  EXPECTED RESULT:  Success (status 200).
   */
 
   const query =
-    `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
-    `password=${encodeURIComponent(learnerUserData.password)}`;
+    `email=${encodeURIComponent(instructorUserData.userInfo.email)}&` +
+    `password=${encodeURIComponent(instructorUserData.password)}`;
+
+  const [response, result] = await sendRequest("GET", query);
+
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(isAValidUID(result?.userUID)).toBe(true);
+  expect(result?.name).toBe(instructorUserData.userInfo.name);
+  expect(result?.email).toBe(instructorUserData.userInfo.email);
+  expect(typeof result?.msg).toBe("undefined");
+});
+
+/*********************************************************************************************/
+
+test("Get the Same Instructor User Using Wrong Password", async function () {
+  /*
+  TEST 7:  Get the same instructor user using the wrong password.
+
+  EXPECTED RESULT:  Fail (status 403).
+  */
+
+  const query =
+    `email=${encodeURIComponent(instructorUserData.userInfo.email)}&` +
+    `password=${encodeURIComponent("wrong_password")}`;
 
   const [response, result] = await sendRequest("GET", query);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(404);
+  expect(response?.status).toBe(403);
   expect(typeof result?.msg).toBe("string");
 });
