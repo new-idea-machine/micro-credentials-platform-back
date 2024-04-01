@@ -87,6 +87,8 @@ app.post("/user", async (req, res) => {
       res.status(406).json({ msg: "Invalid password" });
     } else if (typeof user.password !== "string") {
       res.status(406).json({ msg: "Invalid password type" });
+    } else if (typeof user.isInstructor !== "boolean") {
+      res.status(406).json({ msg: "missing learner and instructor data" });
     } else {
       const registrant = new userModel({
         username: user.userInfo.name,
@@ -126,30 +128,31 @@ app.use((req, res) => {
   console.log(`Unhandled request:  ${req.method} ${req.url}`);
   res.status(400).json({ msg: "Request not handled" });
 });
+// below is for email
 
-const transporter = nodemailer.createTransport({
-  host: "localhost",
-  port: 587,
-  secure: false, // upgrade later with STARTTLS
-  auth: {
-    user: "username",
-    pass: "password"
-  }
-});
+// const transporter = nodemailer.createTransport({
+//   host: "localhost",
+//   port: 587,
+//   secure: false, // upgrade later with STARTTLS
+//   auth: {
+//     user: "username",
+//     pass: "password"
+//   }
+// });
 
-// async..await is not allowed in global scope, must use a wrapper
-async function main() {
-  // send mail with defined transport object
-  const info = await transporter.sendMail({
-    from: '"Maddison Foo Koch 👻" <bbeam1@gmail.com>', // sender address
-    to: "bar@example.com, bbeam1@gmail.com", // list of receivers
-    subject: "Hello ✔", // Subject line
-    text: "Hello world?", // plain text body
-    html: "<b>Hello world?</b>" // html body
-  });
+// // async..await is not allowed in global scope, must use a wrapper
+// async function main() {
+//   // send mail with defined transport object
+//   const info = await transporter.sendMail({
+//     from: '"Maddison Foo Koch 👻" <bbeam1@gmail.com>', // sender address
+//     to: "bar@example.com, bbeam1@gmail.com", // list of receivers
+//     subject: "Hello ✔", // Subject line
+//     text: "Hello world?", // plain text body
+//     html: "<b>Hello world?</b>" // html body
+//   });
 
-  console.log("Message sent: %s", info.messageId);
-  // Message sent: <d786aa62-4e0a-070a-47ed-0b0666549519@ethereal.email>
-}
+//   console.log("Message sent: %s", info.messageId);
+//   // Message sent: <d786aa62-4e0a-070a-47ed-0b0666549519@ethereal.email>
+// }
 
-main().catch(console.error);
+//main().catch(console.error);
