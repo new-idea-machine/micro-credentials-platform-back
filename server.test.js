@@ -431,7 +431,7 @@ test("Get a Non-Existent User", async function () {
   */
 
   const query =
-    `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
+      `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
     `password=${encodeURIComponent(learnerUserData.password)}`;
 
   const [response, result] = await sendRequest("GET", query);
