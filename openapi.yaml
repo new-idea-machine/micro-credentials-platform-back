@@ -1,8 +1,9 @@
 openapi: 3.0.3
 info:
   title: Untapped Energy Application
-  description: An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.3.3"
+  description: >-
+    An application for better support of the ongoing learning initiatives of Untapped Energy.
+  version: "0.4.0"
 
 servers:
   - url: http://localhost:5001
@@ -23,74 +24,53 @@ paths:
         "503":
           $ref: "#/components/responses/CantConnectToDatabase"
 
-  /user:
+  /auth:
     get:
       summary: Log a user in
       description: Log a user in.
-      parameters:
-        - name: email
-          in: query
-          description: User e-mail
-          schema:
-            type: string
-          required: true
-        - name: password
-          in: query
-          description: User password
-          schema:
-            type: string
-          required: true
+      security:
+        - AuthHTTPBasic: []
       responses:
         "200":
-          description: User logged in.
+          description: >-
+            User logged in.  The token in the response body is the bearer token that represents
+            the user.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserInfo"
-        "403":
-          description: Incorrect password.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           description: User not found.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
-        "406":
-          $ref: "#/components/responses/InvalidData"
         "503":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     post:
       summary: Add a new user.
       description: Add a new user to the system.
+      security:
+        - AuthHTTPBasic: []
       requestBody:
         description: Details of the user to be added.
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                userInfo:
-                  $ref: "#/components/schemas/UserInfo"
-                password:
-                  type: string
-                isInstructor:
-                  type: boolean
+              $ref: "#/components/schemas/RegistrationInfo"
       responses:
         "201":
-          description: User successfully added.
+          description: >-
+            User successfully added.  The token in the response body is the bearer token that
+            represents the user.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  userUID:
-                    $ref: "#/components/schemas/UID"
+                $ref: "#/components/schemas/Credential"
         "403":
           description: User already exists.
           content:
@@ -102,17 +82,12 @@ paths:
         "503":
           $ref: "#/components/responses/CantConnectToDatabase"
 
-  /user/{id}:
+  /user:
     get:
       summary: Return a specific user.
-      description: Returns information about the user identified by {id}.
-      parameters:
-        - name: id
-          in: path
-          description: User UID
-          schema:
-            type: string
-          required: true
+      description: Returns information about the user identified by the bearer token.
+      security:
+        - AuthHTTPBearer: []
       responses:
         "200":
           description: User information
@@ -120,27 +95,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserInfo"
-        "404":
-          description: User not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "406":
-          $ref: "#/components/responses/InvalidData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "503":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     patch:
       summary: Update a specific user.
-      description: Update information about the user identified by {id}.
-      parameters:
-        - name: id
-          in: path
-          description: User UID
-          schema:
-            type: string
-          required: true
+      description: Update information about the user identified by the bearer token.
       requestBody:
         description: Updated details of the user.
         required: true
@@ -148,6 +110,8 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/UserInfo"
+      security:
+        - AuthHTTPBearer: []
       responses:
         "200":
           description: User successfully updated.
@@ -155,18 +119,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
-        "403":
-          description: Request denied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "404":
-          description: User not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "406":
           $ref: "#/components/responses/InvalidData"
         "503":
@@ -174,14 +128,11 @@ paths:
 
     delete:
       summary: Delete a specific user.
-      description: Removes the user identified by {id} from the system (as well as any related data).
-      parameters:
-        - name: id
-          in: path
-          description: User UID
-          schema:
-            type: string
-          required: true
+      description: >-
+        Removes the user identified by the bearer token from the system (as well as any related
+        data).
+      security:
+        - AuthHTTPBearer: []
       responses:
         "200":
           description: User successfully deleted.
@@ -189,24 +140,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
-        "403":
-          description: Request denied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "404":
-          description: User not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "406":
-          $ref: "#/components/responses/InvalidData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "503":
           $ref: "#/components/responses/CantConnectToDatabase"
 
 components:
+  securitySchemes:
+    AuthHTTPBasic:
+      type: http
+      scheme: basic
+    AuthHTTPBearer:
+      type: http
+      scheme: bearer
+
   responses:
     CantConnectToDatabase:
       description: Can"t connect to database.
@@ -220,25 +167,61 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ServerMessage"
+    Unauthorized:
+      description: Not authorized.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ServerMessage"
 
   schemas:
+    RegistrationInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        isInstructor:
+          type: boolean
+      required:
+        - password
+        - isInstructor
+
+    Credential:
+      type: object
+      properties:
+        token:
+          type: string
+        userInfo:
+          $ref: "#/components/schemas/UserInfo"
+      required:
+        - token
+        - userInfo
+
     UserInfo:
       type: object
       properties:
-        userUID:
-          $ref: "#/components/schemas/UID"
         name:
           type: string
+          nullable: true
         email:
           type: string
+          nullable: true
+        learnerInfo:
+          $ref: "#/components/schemas/LearnerInfo"
+        instructorInfo:
+          $ref: "#/components/schemas/InstructorInfo"
       required:
         - name
         - email
+        - learnerInfo
 
-    UID:
-      oneOf:
-        - type: integer
-        - type: string
+    LearnerInfo:
+      type: object
+      nullable: true
+
+    InstructorInfo:
+      type: object
+      nullable: true
 
     ServerMessage:
       type: object
