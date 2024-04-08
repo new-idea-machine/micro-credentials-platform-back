@@ -189,9 +189,17 @@ components:
     Credential:
       type: object
       properties:
-        token:
+        # Naming conventions in this section comply with RFC 6749 (The OAuth 2.0 Authorization
+        # Framework) which may be used later -- see
+        # https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
+
+        access_token:
           type: string
-        userInfo:
+        token_type:
+          type: string
+          enum:
+            - "Bearer"
+        user_info:
           $ref: "#/components/schemas/UserInfo"
       required:
         - token
