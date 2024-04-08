@@ -49,17 +49,23 @@ app.get("/", async (req, res) => {
 
 app.get("/user", async (req, res) => {
   try {
-    const user = await userModel.findOne({ email: req.query.email });
     const password = req.query.password;
     const email = req.query.email;
     if (!email || !password) {
       res.status(406).json({ msg: "No email or password" });
-    } else if (!user) {
-      res.status(404).json({ msg: "User not found." });
-    } else if (password !== user.password) {
-      res.status(403).json({ msg: "Incorrect password." });
     } else {
-      res.status(200).json({ userUID: user._id, name: user.username, email: user.email });
+      try {
+        const user = await userModel.findOne({ email: req.query.email });
+        if (!user) {
+          res.status(404).json({ msg: "User not found." });
+        } else if (password !== user.password) {
+          res.status(403).json({ msg: "Incorrect password." });
+        } else {
+          res.status(200).json({ userUID: user._id, name: user.username, email: user.email });
+        }
+      } catch (error) {
+        res.status(503).json({ msg: "Cant reach server" });
+      }
     }
   } catch (error) {
     res.status(503).json({ msg: "Cant reach server" });
