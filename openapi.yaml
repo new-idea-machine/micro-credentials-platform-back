@@ -3,7 +3,7 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.4.0"
+  version: "0.4.1"
 
 servers:
   - url: http://localhost:5001
@@ -94,7 +94,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserInfo"
+                $ref: "#/components/schemas/UserData"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "503":
@@ -109,7 +109,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserInfo"
+              $ref: "#/components/schemas/UserData"
       security:
         - AuthHTTPBearer: []
       responses:
@@ -199,13 +199,14 @@ components:
           type: string
           enum:
             - "Bearer"
-        user_info:
-          $ref: "#/components/schemas/UserInfo"
+        user_data:
+          $ref: "#/components/schemas/UserData"
       required:
-        - token
-        - userInfo
+        - access_token
+        - token_type
+        - user_data
 
-    UserInfo:
+    UserData:
       type: object
       properties:
         name:
@@ -214,20 +215,20 @@ components:
         email:
           type: string
           nullable: true
-        learnerInfo:
-          $ref: "#/components/schemas/LearnerInfo"
-        instructorInfo:
-          $ref: "#/components/schemas/InstructorInfo"
+        learnerData:
+          $ref: "#/components/schemas/LearnerData"
+        instructorData:
+          $ref: "#/components/schemas/InstructorData"
       required:
         - name
         - email
         - learnerInfo
 
-    LearnerInfo:
+    LearnerData:
       type: object
       nullable: true
 
-    InstructorInfo:
+    InstructorData:
       type: object
       nullable: true
 
