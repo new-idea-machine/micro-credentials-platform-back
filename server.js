@@ -47,28 +47,44 @@ app.get("/", async (req, res) => {
   }
 });
 
-app.get("/user", async (req, res) => {
-  try {
-    const password = req.query.password;
-    const email = req.query.email;
+app.get("/auth", async (req, res) => {
+  const authorizationHeaderValue = req.header("Authorization");
+  const basicAuthorizationData = /^Basic (\S+)$/gi.exec(authorizationHeaderValue);
+  if (!basicAuthorizationData) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+    res.status(401).json({ msg: "Invalid credentials" });
+  } else {
+    const credentials = atob(basicAuthorizationData[1]).split(":");
+    const email = credentials[0];
+    const password = credentials[1];
     if (!email || !password) {
-      res.status(406).json({ msg: "No email or password" });
+      res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+      res.status(401).json({ msg: "Invalid credentials" });
     } else {
       try {
-        const user = await userModel.findOne({ email: req.query.email });
+        const user = await userModel.findOne({ email }).lean();
         if (!user) {
           res.status(404).json({ msg: "User not found." });
         } else if (password !== user.password) {
-          res.status(403).json({ msg: "Incorrect password." });
+          res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+          res.status(401).json({ msg: "Invalid credentials." });
         } else {
-          res.status(200).json({ userUID: user._id, name: user.username, email: user.email });
+          const access_token = Date.now().toString(); // temporary placeholder for token generation
+          res.status(200).json({
+            access_token,
+            token_type: "Bearer",
+            user_info: {
+              name: user.name,
+              email,
+              learnerData: user.learnerData,
+              instructorData: user.instructorData
+            }
+          });
         }
-      } catch (error) {
+      } catch {
         res.status(503).json({ msg: "Cant reach server" });
       }
     }
-  } catch (error) {
-    res.status(503).json({ msg: "Cant reach server" });
   }
 });
 
