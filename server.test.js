@@ -80,7 +80,7 @@ const instructorUserData = {
 
 /*********************************************************************************************/
 
-async function sendRequest(method, data = null) {
+async function sendRequest(method, path, headers, data = null) {
   /*
   Handle all of the communication with the server.
 
@@ -101,10 +101,12 @@ async function sendRequest(method, data = null) {
     mode: "cors"
   };
 
+  if (headers) options.headers = headers;
+
   if (data) {
     if (method !== "GET") {
-      options.headers = { "Content-Type": "application/json" };
       options.body = JSON.stringify(data);
+      options.headers["Content-Type"] = "application/json";
     } else {
       parameters = "?" + data;
     }
@@ -120,7 +122,7 @@ async function sendRequest(method, data = null) {
   */
 
   try {
-    response = await fetch(`${serverURL}/user${parameters}`, options);
+    response = await fetch(`${serverURL}${path}${parameters}`, options);
 
     try {
       result = await response.json();
@@ -156,7 +158,7 @@ test("Register New Learner User (Missing Name)", async function () {
 
   delete badData.userInfo.name;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -177,7 +179,7 @@ test("Register New Learner User (Bad Name Type)", async function () {
 
   badData.userInfo.name = { rose: badData.userInfo.name };
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -198,7 +200,7 @@ test("Register New Learner User (Bad Name)", async function () {
 
   badData.userInfo.name = "";
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -219,7 +221,7 @@ test("Register New Learner User (Missing E-mail Address)", async function () {
 
   delete badData.userInfo.email;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -240,7 +242,7 @@ test("Register New Learner User (Bad E-mail Address Type)", async function () {
 
   badData.userInfo.email = -1;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -261,7 +263,7 @@ test("Register New Learner User (Bad E-mail Address)", async function () {
 
   badData.userInfo.email = "Bad e-mail address";
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -282,7 +284,7 @@ test("Register New Learner User (Missing Password)", async function () {
 
   delete badData.password;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -303,7 +305,7 @@ test("Register New Learner User (Bad Password Type)", async function () {
 
   badData.password = { error: badData.password };
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -324,7 +326,7 @@ test("Register New Learner User (Bad Password)", async function () {
 
   badData.password = "";
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -345,7 +347,7 @@ test("Register New Learner User (Missing User Type)", async function () {
 
   delete badData.isInstructor;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -366,7 +368,7 @@ test("Register New Learner User (Bad User Type)", async function () {
 
   badData.isInstructor = 42;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -383,7 +385,7 @@ test("Register New Learner User", async function () {
   EXPECTED RESULT:  Success (status 201).
   */
 
-  const [response, result] = await sendRequest("POST", learnerUserData);
+  const [response, result] = await sendRequest("POST", "/user", {}, learnerUserData);
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
@@ -400,7 +402,7 @@ test("Re-Register New Learner User", async function () {
   EXPECTED RESULT:  Fail (status 403).
   */
 
-  const [response, result] = await sendRequest("POST", learnerUserData);
+  const [response, result] = await sendRequest("POST", "/user", {}, learnerUserData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(403);
@@ -421,7 +423,7 @@ test("Register New Instructor User (Missing Name)", async function () {
 
   delete badData.userInfo.name;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -442,7 +444,7 @@ test("Register New Instructor User (Bad Name Type)", async function () {
 
   badData.userInfo.name = { rose: badData.userInfo.name };
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -463,7 +465,7 @@ test("Register New Instructor User (Bad Name)", async function () {
 
   badData.userInfo.name = "";
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -484,7 +486,7 @@ test("Register New Instructor User (Missing E-mail Address)", async function () 
 
   delete badData.userInfo.email;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -505,7 +507,7 @@ test("Register New Instructor User (Bad E-mail Address Type)", async function ()
 
   badData.userInfo.email = -1;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -526,7 +528,7 @@ test("Register New Instructor User (Bad E-mail Address)", async function () {
 
   badData.userInfo.email = "Bad e-mail address";
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -547,7 +549,7 @@ test("Register New Instructor User (Missing Password)", async function () {
 
   delete badData.password;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -568,7 +570,7 @@ test("Register New Instructor User (Bad Password Type)", async function () {
 
   badData.password = { error: badData.password };
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -589,7 +591,7 @@ test("Register New Instructor User (Bad Password)", async function () {
 
   badData.password = "";
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -610,7 +612,7 @@ test("Register New Instructor User (Missing User Type)", async function () {
 
   delete badData.isInstructor;
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -631,7 +633,7 @@ test("Register New Instructor User (Bad User Type)", async function () {
 
   badData.isInstructor = { professor: "Ned Brainard" };
 
-  const [response, result] = await sendRequest("POST", badData);
+  const [response, result] = await sendRequest("POST", "/user", {}, badData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
@@ -648,7 +650,7 @@ test("Register New Instructor User", async function () {
   EXPECTED RESULT:  Success (status 201).
   */
 
-  const [response, result] = await sendRequest("POST", instructorUserData);
+  const [response, result] = await sendRequest("POST", "/user", {}, instructorUserData);
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
@@ -665,7 +667,7 @@ test("Re-Register New Instructor User", async function () {
   EXPECTED RESULT:  Fail (status 403).
   */
 
-  const [response, result] = await sendRequest("POST", instructorUserData);
+  const [response, result] = await sendRequest("POST", "/user", {}, instructorUserData);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(403);
@@ -681,15 +683,15 @@ test("Get a User Without Providing an E-mail", async function () {
   /*
   TEST 1:  Get a user without providing an e-mail.
 
-  EXPECTED RESULT:  Fail (status 406).
+  EXPECTED RESULT:  Fail (status 401).
   */
 
-  const query = `password=${encodeURIComponent(learnerUserData.password)}`;
+  const headers = { Authorization: `Basic ${btoa(":" + learnerUserData.password)}` };
 
-  const [response, result] = await sendRequest("GET", query);
+  const [response, result] = await sendRequest("GET", "/auth", headers);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(406);
+  expect(response?.status).toBe(401);
   expect(typeof result?.msg).toBe("string");
 });
 
@@ -699,15 +701,15 @@ test("Get a User Without Providing a Password", async function () {
   /*
   TEST 2:  Get a user without providing a password.
 
-  EXPECTED RESULT:  Fail (status 406).
+  EXPECTED RESULT:  Fail (status 401).
   */
 
-  const query = `email=${encodeURIComponent(learnerUserData.userInfo.email)}`;
+  const headers = { Authorization: `Basic ${btoa(learnerUserData.userInfo.email)}` };
 
-  const [response, result] = await sendRequest("GET", query);
+  const [response, result] = await sendRequest("GET", "/auth", headers);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(406);
+  expect(response?.status).toBe(401);
   expect(typeof result?.msg).toBe("string");
 });
 
@@ -720,11 +722,13 @@ test("Get a Non-Existent Learner User", async function () {
   EXPECTED RESULT:  Fail (status 404).
   */
 
-  const query =
-    `email=${encodeURIComponent("-" + learnerUserData.userInfo.email)}&` +
-    `password=${encodeURIComponent(learnerUserData.password)}`;
+  const headers = {
+    Authorization: `Basic ${btoa(
+      "-" + learnerUserData.userInfo.email + ":" + learnerUserData.password
+    )}`
+  };
 
-  const [response, result] = await sendRequest("GET", query);
+  const [response, result] = await sendRequest("GET", "/auth", headers);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(404);
@@ -740,17 +744,19 @@ test("Get an Existing Learner User", async function () {
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const query =
-    `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
-    `password=${encodeURIComponent(learnerUserData.password)}`;
+  const headers = {
+    Authorization: `Basic ${btoa(
+      learnerUserData.userInfo.email + ":" + learnerUserData.password
+    )}`
+  };
 
-  const [response, result] = await sendRequest("GET", query);
+  const [response, result] = await sendRequest("GET", "/auth", headers);
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
-  expect(isAValidUID(result?.userUID)).toBe(true);
-  expect(result?.name).toBe(learnerUserData.userInfo.name);
-  expect(result?.email).toBe(learnerUserData.userInfo.email);
+  expect(typeof result?.access_token).toBe("string");
+  expect(result?.user_info?.name).toBe(learnerUserData.userInfo.name);
+  expect(result?.user_info?.email).toBe(learnerUserData.userInfo.email);
   expect(typeof result?.msg).toBe("undefined");
 });
 
@@ -760,17 +766,17 @@ test("Get the Same Learner User Using Wrong Password", async function () {
   /*
   TEST 5:  Get the same learner User using the wrong password.
 
-  EXPECTED RESULT:  Fail (status 403).
+  EXPECTED RESULT:  Fail (status 401).
   */
 
-  const query =
-    `email=${encodeURIComponent(learnerUserData.userInfo.email)}&` +
-    `password=${encodeURIComponent("wrong_password")}`;
+  const headers = {
+    Authorization: `Basic ${btoa(learnerUserData.userInfo.email + ":wrong_password")}`
+  };
 
-  const [response, result] = await sendRequest("GET", query);
+  const [response, result] = await sendRequest("GET", "/auth", headers);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(403);
+  expect(response?.status).toBe(401);
   expect(typeof result?.msg).toBe("string");
 });
 
@@ -783,17 +789,19 @@ test("Get an Existing Instructor User", async function () {
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const query =
-    `email=${encodeURIComponent(instructorUserData.userInfo.email)}&` +
-    `password=${encodeURIComponent(instructorUserData.password)}`;
+  const headers = {
+    Authorization: `Basic ${btoa(
+      instructorUserData.userInfo.email + ":" + instructorUserData.password
+    )}`
+  };
 
-  const [response, result] = await sendRequest("GET", query);
+  const [response, result] = await sendRequest("GET", "/auth", headers);
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
-  expect(isAValidUID(result?.userUID)).toBe(true);
-  expect(result?.name).toBe(instructorUserData.userInfo.name);
-  expect(result?.email).toBe(instructorUserData.userInfo.email);
+  expect(typeof result?.access_token).toBe("string");
+  expect(result?.user_info?.name).toBe(instructorUserData.userInfo.name);
+  expect(result?.user_info?.email).toBe(instructorUserData.userInfo.email);
   expect(typeof result?.msg).toBe("undefined");
 });
 
@@ -803,16 +811,16 @@ test("Get the Same Instructor User Using Wrong Password", async function () {
   /*
   TEST 7:  Get the same instructor user using the wrong password.
 
-  EXPECTED RESULT:  Fail (status 403).
+  EXPECTED RESULT:  Fail (status 401).
   */
 
-  const query =
-    `email=${encodeURIComponent(instructorUserData.userInfo.email)}&` +
-    `password=${encodeURIComponent("wrong_password")}`;
+  const headers = {
+    Authorization: `Basic ${btoa(instructorUserData.userInfo.email + ":wrong_password")}`
+  };
 
-  const [response, result] = await sendRequest("GET", query);
+  const [response, result] = await sendRequest("GET", "/auth", headers);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(403);
+  expect(response?.status).toBe(401);
   expect(typeof result?.msg).toBe("string");
 });

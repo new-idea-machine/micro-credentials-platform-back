@@ -18,7 +18,7 @@ const learnerSchema = new mongoose.Schema({});
 const instructorSchema = new mongoose.Schema({});
 
 const userSchema = new mongoose.Schema({
-  username: String,
+  name: String,
   email: String,
   password: String,
   learnerData: mongoose.Schema({ data: { type: learnerSchema } }),
@@ -113,7 +113,7 @@ app.post("/user", async (req, res) => {
       res.status(406).json({ msg: "missing learner and instructor data" });
     } else {
       const registrant = new userModel({
-        username: user.userInfo.name,
+        name: user.userInfo.name,
         email: user.userInfo.email,
         password: user.password,
         learnerData: new learnerModel({}),
