@@ -6,6 +6,17 @@ import cors from "cors";
 import validator from "validator";
 import nodemailer from "nodemailer";
 
+function getAuthorizationData(request) {
+  const basicAuthorizationData = /^Basic (\S+)$/gi.exec(request.header("Authorization"));
+
+  if (basicAuthorizationData) {
+    const credentials = /^([^:]*):(.*)$/gi.exec(atob(basicAuthorizationData[1]));
+
+    if (credentials?.length === 3) return { userId: credentials[1], password: credentials[2] };
+    else return null;
+  } else return null;
+}
+
 dotenv.config();
 
 const connectionString = process.env.MONGO_URL;
@@ -48,42 +59,33 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/auth", async (req, res) => {
-  const authorizationHeaderValue = req.header("Authorization");
-  const basicAuthorizationData = /^Basic (\S+)$/gi.exec(authorizationHeaderValue);
-  if (!basicAuthorizationData) {
+  const authorizationData = getAuthorizationData(req);
+  if (!authorizationData?.userId) {
     res.setHeader("WWW-Authenticate", 'Basic realm="user"');
     res.status(401).json({ msg: "Invalid credentials" });
   } else {
-    const credentials = atob(basicAuthorizationData[1]).split(":");
-    const email = credentials[0];
-    const password = credentials[1];
-    if (!email || !password) {
-      res.setHeader("WWW-Authenticate", 'Basic realm="user"');
-      res.status(401).json({ msg: "Invalid credentials" });
-    } else {
-      try {
-        const user = await userModel.findOne({ email }).lean();
-        if (!user) {
-          res.status(404).json({ msg: "User not found." });
-        } else if (password !== user.password) {
-          res.setHeader("WWW-Authenticate", 'Basic realm="user"');
-          res.status(401).json({ msg: "Invalid credentials." });
-        } else {
-          const access_token = Date.now().toString(); // temporary placeholder for token generation
-          res.status(200).json({
-            access_token,
-            token_type: "Bearer",
-            user_info: {
-              name: user.name,
-              email,
-              learnerData: user.learnerData,
-              instructorData: user.instructorData
-            }
-          });
-        }
-      } catch {
-        res.status(503).json({ msg: "Cant reach server" });
+    try {
+      const user = await userModel.findOne({ email: authorizationData.userId }).lean();
+      if (!user) {
+        res.status(404).json({ msg: "User not found." });
+      } else if (authorizationData.password !== user.password) {
+        res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+        res.status(401).json({ msg: "Invalid credentials." });
+      } else {
+        const access_token = Date.now().toString(); // temporary placeholder for token generation
+        res.status(200).json({
+          access_token,
+          token_type: "Bearer",
+          user_info: {
+            name: user.name,
+            email: user.email,
+            learnerData: user.learnerData,
+            instructorData: user.instructorData
+          }
+        });
       }
+    } catch {
+      res.status(503).json({ msg: "Cant reach server" });
     }
   }
 });
