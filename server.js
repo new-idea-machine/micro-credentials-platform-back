@@ -90,43 +90,54 @@ app.get("/auth", async (req, res) => {
   }
 });
 
-app.post("/user", async (req, res) => {
-  try {
-    const user = req.body;
-    const takenEmail = await userModel.findOne({ email: user.userInfo.email });
-    if (!user.userInfo.email) {
-      res.status(406).json({ msg: "Missing email" });
-    } else if (
-      typeof user.userInfo.email !== "string" ||
-      !validator.isEmail(user.userInfo.email)
-    ) {
-      res.status(406).json({ msg: "Invalid e-mail address type" });
-    } else if (takenEmail) {
-      res.status(403).json({ msg: "User already exists (try logging in instead)" });
-    } else if (!user.userInfo.name) {
-      res.status(406).json({ msg: "Missing name" });
-    } else if (typeof user.userInfo.name !== "string") {
-      res.status(406).json({ msg: "Invalid name type" });
-    } else if (!user.password) {
-      res.status(406).json({ msg: "Invalid password" });
-    } else if (typeof user.password !== "string") {
-      res.status(406).json({ msg: "Invalid password type" });
-    } else if (typeof user.isInstructor !== "boolean") {
-      res.status(406).json({ msg: "missing learner and instructor data" });
-    } else {
-      const registrant = new userModel({
-        name: user.userInfo.name,
-        email: user.userInfo.email,
-        password: user.password,
-        learnerData: new learnerModel({}),
-        instructorData: user.isInstructor ? new instructorModel({}) : null
-      });
-      const newDocument = await registrant.save();
-      res.status(201).json({ userUID: newDocument._id });
+app.post("/auth", async (req, res) => {
+  const authorizationData = getAuthorizationData(req);
+  if (!authorizationData?.userId) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+    res.status(401).json({ msg: "Invalid credentials" });
+  } else {
+    try {
+      const user = req.body;
+      const takenEmail = await userModel.findOne({ email: authorizationData.userId });
+      if (takenEmail) {
+        res.status(403).json({ msg: "User already exists (try logging in instead)" });
+      } else if (
+        !validator.isEmail(authorizationData.userId) ||
+        authorizationData.password === ""
+      ) {
+        res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+        res.status(401).json({ msg: "Invalid credentials" });
+      } else if (!user.name) {
+        res.status(406).json({ msg: "Missing name" });
+      } else if (typeof user.name !== "string") {
+        res.status(406).json({ msg: "Invalid name type" });
+      } else if (typeof user.isInstructor !== "boolean") {
+        res.status(406).json({ msg: "missing learner and instructor data" });
+      } else {
+        const registrant = new userModel({
+          name: user.name,
+          email: authorizationData.userId,
+          password: authorizationData.password,
+          learnerData: new learnerModel({}),
+          instructorData: user.isInstructor ? new instructorModel({}) : null
+        });
+        const newDocument = await registrant.save();
+        const access_token = Date.now().toString(); // temporary placeholder for token generation
+        res.status(201).json({
+          access_token,
+          token_type: "Bearer",
+          user_info: {
+            name: newDocument.name,
+            email: newDocument.email,
+            learnerData: newDocument.learnerData,
+            instructorData: newDocument.instructorData
+          }
+        });
+      }
+    } catch (error) {
+      console.log(typeof req.body.userInfo.email);
+      res.status(503).json({ msg: "Cant reach server" });
     }
-  } catch (error) {
-    console.log(typeof req.body.userInfo.email);
-    res.status(503).json({ msg: "Cant reach server" });
   }
 });
 
