@@ -76,7 +76,7 @@ app.get("/auth", async (req, res) => {
         res.status(200).json({
           access_token,
           token_type: "Bearer",
-          user_info: {
+          user_data: {
             name: user.name,
             email: user.email,
             learnerData: user.learnerData,
@@ -120,7 +120,7 @@ app.post("/auth", async (req, res) => {
       res.status(201).json({
         access_token,
         token_type: "Bearer",
-        user_info: {
+        user_data: {
           name: newDocument.name,
           email: newDocument.email,
           learnerData: newDocument.learnerData,
