@@ -7,12 +7,14 @@ import validator from "validator";
 import nodemailer from "nodemailer";
 
 function getAuthorizationData(request) {
-  const basicAuthorizationData = /^Basic (\S+)$/gi.exec(request.header("Authorization"));
+  const basicAuthorizationParts = /^Basic (\S+)$/gi.exec(request.header("Authorization"));
 
-  if (basicAuthorizationData) {
-    const credentials = /^([^:]*):(.*)$/gi.exec(atob(basicAuthorizationData[1]));
+  if (basicAuthorizationParts) {
+    const credentialsText = Buffer.from(basicAuthorizationParts[1], "base64");
+    const credentialParts = /^([^:]*):(.*)$/gi.exec(credentialsText);
 
-    if (credentials?.length === 3) return { userId: credentials[1], password: credentials[2] };
+    if (credentialParts?.length === 3)
+      return { userId: credentialParts[1], password: credentialParts[2] };
     else return null;
   } else return null;
 }

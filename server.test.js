@@ -92,10 +92,10 @@ async function sendRequest(method, path, credentials, data = null) {
     headers: {}
   };
 
-  if (credentials)
-    options.headers["Authorization"] = `Basic ${btoa(
-      credentials.email + ":" + credentials.password
-    )}`;
+  if (credentials) {
+    const credentialsBuffer = Buffer.from(`${credentials.email}:${credentials.password}`);
+    options.headers["Authorization"] = `Basic ${credentialsBuffer.toString("base64")}`;
+  }
 
   if (data) {
     if (method !== "GET") {
@@ -148,12 +148,12 @@ test("Register New Learner User (Missing Name)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(406);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -176,12 +176,12 @@ test("Register New Learner User (Bad Name Type)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(406);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -204,12 +204,12 @@ test("Register New Learner User (Bad Name)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(406);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -232,12 +232,12 @@ test("Register New Learner User (Missing E-mail Address)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(401);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -260,12 +260,12 @@ test("Register New Learner User (Bad E-mail Address)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(401);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -288,12 +288,12 @@ test("Register New Learner User (Missing Password)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(401);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -316,12 +316,12 @@ test("Register New Learner User (Missing User Type)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(406);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -344,12 +344,12 @@ test("Register New Learner User (Bad User Type)", async function () {
     badData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(406);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(406);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -368,15 +368,15 @@ test("Register New Learner User", async function () {
     learnerUserData.userInfo
   );
 
-  expect(response.ok).toBe(true);
-  expect(response.status).toBe(201);
-  expect(typeof result.msg).toBe("undefined");
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_info.name).toBe(learnerUserData.userInfo.name);
-  expect(result.user_info.email).toBe(learnerUserData.credentials.email);
-  expect(typeof result.user_info.learnerData).toBe("object");
-  expect(result.user_info.instructorData).toBe(null);
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(201);
+  expect(typeof result?.msg).toBe("undefined");
+  expect(typeof result?.access_token).toBe("string");
+  expect(result?.token_type).toBe("Bearer");
+  expect(result?.user_info.name).toBe(learnerUserData.userInfo.name);
+  expect(result?.user_info.email).toBe(learnerUserData.credentials.email);
+  expect(typeof result?.user_info.learnerData).toBe("object");
+  expect(result?.user_info.instructorData).toBe(null);
 });
 
 /*********************************************************************************************/
@@ -395,12 +395,12 @@ test("Re-Register New Learner User", async function () {
     learnerUserData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(403);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(403);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -419,15 +419,15 @@ test("Register New Instructor User", async function () {
     instructorUserData.userInfo
   );
 
-  expect(response.ok).toBe(true);
-  expect(response.status).toBe(201);
-  expect(typeof result.msg).toBe("undefined");
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_info.name).toBe(instructorUserData.userInfo.name);
-  expect(result.user_info.email).toBe(instructorUserData.credentials.email);
-  expect(typeof result.user_info.learnerData).toBe("object");
-  expect(typeof result.user_info.instructorData).toBe("object");
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(201);
+  expect(typeof result?.msg).toBe("undefined");
+  expect(typeof result?.access_token).toBe("string");
+  expect(result?.token_type).toBe("Bearer");
+  expect(result?.user_info.name).toBe(instructorUserData.userInfo.name);
+  expect(result?.user_info.email).toBe(instructorUserData.credentials.email);
+  expect(typeof result?.user_info.learnerData).toBe("object");
+  expect(typeof result?.user_info.instructorData).toBe("object");
 });
 
 /*********************************************************************************************/
@@ -446,12 +446,12 @@ test("Re-Register New Instructor User", async function () {
     instructorUserData.userInfo
   );
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(403);
-  expect(typeof result.msg).toBe("string");
-  expect(typeof result.access_token).toBe("undefined");
-  expect(typeof result.token_type).toBe("undefined");
-  expect(typeof result.user_info).toBe("undefined");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(403);
+  expect(typeof result?.msg).toBe("string");
+  expect(typeof result?.access_token).toBe("undefined");
+  expect(typeof result?.token_type).toBe("undefined");
+  expect(typeof result?.user_info).toBe("undefined");
 });
 
 // ============================================================================================
@@ -471,9 +471,9 @@ test("Get a User Without Providing an E-mail", async function () {
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(401);
-  expect(typeof result.msg).toBe("string");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(typeof result?.msg).toBe("string");
 });
 
 /*********************************************************************************************/
@@ -491,9 +491,9 @@ test("Get a User Without Providing a Password", async function () {
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(401);
-  expect(typeof result.msg).toBe("string");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(typeof result?.msg).toBe("string");
 });
 
 /*********************************************************************************************/
@@ -511,9 +511,9 @@ test("Get a Non-Existent Learner User", async function () {
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(404);
-  expect(typeof result.msg).toBe("string");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(404);
+  expect(typeof result?.msg).toBe("string");
 });
 
 /*********************************************************************************************/
@@ -528,12 +528,12 @@ test("Get an Existing Learner User", async function () {
   const credentials = structuredClone(learnerUserData.credentials);
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response.ok).toBe(true);
-  expect(response.status).toBe(200);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.user_info?.name).toBe(learnerUserData.userInfo.name);
-  expect(result.user_info?.email).toBe(learnerUserData.credentials.email);
-  expect(typeof result.msg).toBe("undefined");
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(typeof result?.access_token).toBe("string");
+  expect(result?.user_info?.name).toBe(learnerUserData.userInfo.name);
+  expect(result?.user_info?.email).toBe(learnerUserData.credentials.email);
+  expect(typeof result?.msg).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -551,9 +551,9 @@ test("Get the Same Learner User Using Wrong Password", async function () {
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(401);
-  expect(typeof result.msg).toBe("string");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(typeof result?.msg).toBe("string");
 });
 
 /*********************************************************************************************/
@@ -568,12 +568,12 @@ test("Get an Existing Instructor User", async function () {
   const credentials = structuredClone(instructorUserData.credentials);
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response.ok).toBe(true);
-  expect(response.status).toBe(200);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.user_info?.name).toBe(instructorUserData.userInfo.name);
-  expect(result.user_info?.email).toBe(instructorUserData.credentials.email);
-  expect(typeof result.msg).toBe("undefined");
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(typeof result?.access_token).toBe("string");
+  expect(result?.user_info?.name).toBe(instructorUserData.userInfo.name);
+  expect(result?.user_info?.email).toBe(instructorUserData.credentials.email);
+  expect(typeof result?.msg).toBe("undefined");
 });
 
 /*********************************************************************************************/
@@ -591,7 +591,7 @@ test("Get the Same Instructor User Using Wrong Password", async function () {
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response.ok).toBe(false);
-  expect(response.status).toBe(401);
-  expect(typeof result.msg).toBe("string");
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(typeof result?.msg).toBe("string");
 });
