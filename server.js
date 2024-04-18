@@ -29,16 +29,14 @@ const learnerSchema = new mongoose.Schema({});
 const instructorSchema = new mongoose.Schema({});
 
 const userSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  password: String,
-  learnerData: mongoose.Schema({ data: { type: learnerSchema } }),
-  instructorData: mongoose.Schema({ data: { type: instructorSchema } })
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  learnerData: { type: learnerSchema, required: true },
+  instructorData: { type: instructorSchema }
 });
 
 const userModel = database.model("users", userSchema);
-const learnerModel = database.model("learner", learnerSchema);
-const instructorModel = database.model("instructor", instructorSchema);
 
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 app.use(bodyParser.json(), urlencodedParser);
@@ -92,51 +90,50 @@ app.get("/auth", async (req, res) => {
 
 app.post("/auth", async (req, res) => {
   const authorizationData = getAuthorizationData(req);
-  if (!authorizationData?.userId) {
+  const user = req.body;
+  if (
+    !authorizationData?.userId ||
+    !validator.isEmail(authorizationData.userId) ||
+    authorizationData?.password === ""
+  ) {
     res.setHeader("WWW-Authenticate", 'Basic realm="user"');
     res.status(401).json({ msg: "Invalid credentials" });
+  } else if (!user?.name) {
+    res.status(406).json({ msg: "Missing name" });
+  } else if (typeof user?.name !== "string") {
+    res.status(406).json({ msg: "Invalid name type" });
+  } else if (typeof user?.isInstructor !== "boolean") {
+    res.status(406).json({ msg: "missing learner and instructor data" });
   } else {
+    const registrant = new userModel({
+      name: user.name,
+      email: authorizationData.userId,
+      password: authorizationData.password,
+      learnerData: {},
+      instructorData: user.isInstructor ? {} : null
+    });
     try {
-      const user = req.body;
-      const takenEmail = await userModel.findOne({ email: authorizationData.userId });
-      if (takenEmail) {
-        res.status(403).json({ msg: "User already exists (try logging in instead)" });
-      } else if (
-        !validator.isEmail(authorizationData.userId) ||
-        authorizationData.password === ""
-      ) {
-        res.setHeader("WWW-Authenticate", 'Basic realm="user"');
-        res.status(401).json({ msg: "Invalid credentials" });
-      } else if (!user.name) {
-        res.status(406).json({ msg: "Missing name" });
-      } else if (typeof user.name !== "string") {
-        res.status(406).json({ msg: "Invalid name type" });
-      } else if (typeof user.isInstructor !== "boolean") {
-        res.status(406).json({ msg: "missing learner and instructor data" });
-      } else {
-        const registrant = new userModel({
-          name: user.name,
-          email: authorizationData.userId,
-          password: authorizationData.password,
-          learnerData: new learnerModel({}),
-          instructorData: user.isInstructor ? new instructorModel({}) : null
-        });
-        const newDocument = await registrant.save();
-        const access_token = Date.now().toString(); // temporary placeholder for token generation
-        res.status(201).json({
-          access_token,
-          token_type: "Bearer",
-          user_info: {
-            name: newDocument.name,
-            email: newDocument.email,
-            learnerData: newDocument.learnerData,
-            instructorData: newDocument.instructorData
-          }
-        });
-      }
+      const newDocument = await registrant.save();
+      const access_token = Date.now().toString(); // temporary placeholder for token generation
+      res.status(201).json({
+        access_token,
+        token_type: "Bearer",
+        user_info: {
+          name: newDocument.name,
+          email: newDocument.email,
+          learnerData: newDocument.learnerData,
+          instructorData: newDocument.instructorData
+        }
+      });
     } catch (error) {
-      console.log(typeof req.body.userInfo.email);
-      res.status(503).json({ msg: "Cant reach server" });
+      const duplicateKeyError = 11000;
+      if (error?.code === duplicateKeyError) {
+        res.status(403).json({ msg: "User already exists (try logging in instead)" });
+      } else if (error?.name === "ValidationError" || error?.name === "CastError") {
+        res.status(406).json({ msg: "Invalid data" });
+      } else {
+        res.status(503).json({ msg: "Cant reach server" });
+      }
     }
   }
 });
