@@ -6,6 +6,34 @@ import cors from "cors";
 import validator from "validator";
 import nodemailer from "nodemailer";
 
+function getAuthorizationData(request) {
+  /*
+  Extract authorization data from an Express.js "Request" object and return an object
+  containing this data.  If no recognized authorization data is found then return "null".
+
+  Authorization data is found in the request's "Authorization" header.  The actual members of
+  the returned object will depend on the type of authorization in the request.
+
+  If valid HTTP Basic authorization (see RFC 7617) is found then the returned object's members
+  will be "userId" and "password".
+  */
+
+  const authorizationValue = request.header("Authorization");
+  const basicAuthorization = /^Basic (?<credentials64>\S+)$/i.exec(authorizationValue);
+
+  if (basicAuthorization) {
+    /*
+    With HTTP Basic authorization, the credentials are in the format "<userId>:<password>" but
+    encoded in Base64 (see RFC 7617 section 2 for a more detailed description).
+    */
+
+    const credentialsText = Buffer.from(basicAuthorization.groups.credentials64, "base64");
+    const credentials = /^(?<userId>[^:]*):(?<password>.*)$/i.exec(credentialsText)?.groups;
+
+    return credentials ? { userId: credentials.userId, password: credentials.password } : null;
+  } else return null;
+}
+
 dotenv.config();
 
 const connectionString = process.env.MONGO_URL;
@@ -18,16 +46,14 @@ const learnerSchema = new mongoose.Schema({});
 const instructorSchema = new mongoose.Schema({});
 
 const userSchema = new mongoose.Schema({
-  username: String,
-  email: String,
-  password: String,
-  learnerData: mongoose.Schema({ data: { type: learnerSchema } }),
-  instructorData: mongoose.Schema({ data: { type: instructorSchema } })
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  learnerData: { type: learnerSchema, required: true },
+  instructorData: { type: instructorSchema }
 });
 
 const userModel = database.model("users", userSchema);
-const learnerModel = database.model("learner", learnerSchema);
-const instructorModel = database.model("instructor", instructorSchema);
 
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 app.use(bodyParser.json(), urlencodedParser);
@@ -47,68 +73,85 @@ app.get("/", async (req, res) => {
   }
 });
 
-app.get("/user", async (req, res) => {
-  try {
-    const password = req.query.password;
-    const email = req.query.email;
-    if (!email || !password) {
-      res.status(406).json({ msg: "No email or password" });
-    } else {
-      try {
-        const user = await userModel.findOne({ email: req.query.email });
-        if (!user) {
-          res.status(404).json({ msg: "User not found." });
-        } else if (password !== user.password) {
-          res.status(403).json({ msg: "Incorrect password." });
-        } else {
-          res.status(200).json({ userUID: user._id, name: user.username, email: user.email });
-        }
-      } catch (error) {
-        res.status(503).json({ msg: "Cant reach server" });
+app.get("/auth", async (req, res) => {
+  const authorizationData = getAuthorizationData(req);
+  if (!authorizationData?.userId) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+    res.status(401).json({ msg: "Invalid credentials" });
+  } else {
+    try {
+      const user = await userModel.findOne({ email: authorizationData.userId }).lean();
+      if (!user) {
+        res.status(404).json({ msg: "User not found." });
+      } else if (authorizationData.password !== user.password) {
+        res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+        res.status(401).json({ msg: "Invalid credentials." });
+      } else {
+        const access_token = Date.now().toString(); // temporary placeholder for token generation
+        res.status(200).json({
+          access_token,
+          token_type: "Bearer",
+          user_data: {
+            name: user.name,
+            email: user.email,
+            learnerData: user.learnerData,
+            instructorData: user.instructorData
+          }
+        });
       }
+    } catch {
+      res.status(503).json({ msg: "Cant reach server" });
     }
-  } catch (error) {
-    res.status(503).json({ msg: "Cant reach server" });
   }
 });
 
-app.post("/user", async (req, res) => {
-  try {
-    const user = req.body;
-    const takenEmail = await userModel.findOne({ email: user.userInfo.email });
-    if (!user.userInfo.email) {
-      res.status(406).json({ msg: "Missing email" });
-    } else if (
-      typeof user.userInfo.email !== "string" ||
-      !validator.isEmail(user.userInfo.email)
-    ) {
-      res.status(406).json({ msg: "Invalid e-mail address type" });
-    } else if (takenEmail) {
-      res.status(403).json({ msg: "User already exists (try logging in instead)" });
-    } else if (!user.userInfo.name) {
-      res.status(406).json({ msg: "Missing name" });
-    } else if (typeof user.userInfo.name !== "string") {
-      res.status(406).json({ msg: "Invalid name type" });
-    } else if (!user.password) {
-      res.status(406).json({ msg: "Invalid password" });
-    } else if (typeof user.password !== "string") {
-      res.status(406).json({ msg: "Invalid password type" });
-    } else if (typeof user.isInstructor !== "boolean") {
-      res.status(406).json({ msg: "missing learner and instructor data" });
-    } else {
-      const registrant = new userModel({
-        username: user.userInfo.name,
-        email: user.userInfo.email,
-        password: user.password,
-        learnerData: new learnerModel({}),
-        instructorData: user.isInstructor ? new instructorModel({}) : null
-      });
+app.post("/auth", async (req, res) => {
+  const authorizationData = getAuthorizationData(req);
+  const user = req.body;
+  if (
+    !authorizationData?.userId ||
+    !validator.isEmail(authorizationData.userId) ||
+    authorizationData?.password === ""
+  ) {
+    res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+    res.status(401).json({ msg: "Invalid credentials" });
+  } else if (!user?.name) {
+    res.status(406).json({ msg: "Missing name" });
+  } else if (typeof user?.name !== "string") {
+    res.status(406).json({ msg: "Invalid name type" });
+  } else if (typeof user?.isInstructor !== "boolean") {
+    res.status(406).json({ msg: "missing learner and instructor data" });
+  } else {
+    const registrant = new userModel({
+      name: user.name,
+      email: authorizationData.userId,
+      password: authorizationData.password,
+      learnerData: {},
+      instructorData: user.isInstructor ? {} : null
+    });
+    try {
       const newDocument = await registrant.save();
-      res.status(201).json({ userUID: newDocument._id });
+      const access_token = Date.now().toString(); // temporary placeholder for token generation
+      res.status(201).json({
+        access_token,
+        token_type: "Bearer",
+        user_data: {
+          name: newDocument.name,
+          email: newDocument.email,
+          learnerData: newDocument.learnerData,
+          instructorData: newDocument.instructorData
+        }
+      });
+    } catch (error) {
+      const duplicateKeyError = 11000;
+      if (error?.code === duplicateKeyError) {
+        res.status(403).json({ msg: "User already exists (try logging in instead)" });
+      } else if (error?.name === "ValidationError" || error?.name === "CastError") {
+        res.status(406).json({ msg: "Invalid data" });
+      } else {
+        res.status(503).json({ msg: "Cant reach server" });
+      }
     }
-  } catch (error) {
-    console.log(typeof req.body.userInfo.email);
-    res.status(503).json({ msg: "Cant reach server" });
   }
 });
 
