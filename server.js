@@ -7,15 +7,30 @@ import validator from "validator";
 import nodemailer from "nodemailer";
 
 function getAuthorizationData(request) {
-  const basicAuthorizationParts = /^Basic (\S+)$/gi.exec(request.header("Authorization"));
+  /*
+  Extract authorization data from an Express.js "Request" object and return an object
+  containing this data.  If no recognized authorization data is found then return "null".
 
-  if (basicAuthorizationParts) {
-    const credentialsText = Buffer.from(basicAuthorizationParts[1], "base64");
-    const credentialParts = /^([^:]*):(.*)$/gi.exec(credentialsText);
+  Authorization data is found in the request's "Authorization" header.  The actual members of
+  the returned object will depend on the type of authorization in the request.
 
-    if (credentialParts?.length === 3)
-      return { userId: credentialParts[1], password: credentialParts[2] };
-    else return null;
+  If valid HTTP Basic authorization (see RFC 7617) is found then the returned object's members
+  will be "userId" and "password".
+  */
+
+  const authorizationValue = request.header("Authorization");
+  const basicAuthorization = /^Basic (?<credentials64>\S+)$/i.exec(authorizationValue);
+
+  if (basicAuthorization) {
+    /*
+    With HTTP Basic authorization, the credentials are in the format "<userId>:<password>" but
+    encoded in Base64 (see RFC 7617 section 2 for a more detailed description).
+    */
+
+    const credentialsText = Buffer.from(basicAuthorization.groups.credentials64, "base64");
+    const credentials = /^(?<userId>[^:]*):(?<password>.*)$/i.exec(credentialsText)?.groups;
+
+    return credentials ? { userId: credentials.userId, password: credentials.password } : null;
   } else return null;
 }
 
