@@ -3,7 +3,7 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.4.1"
+  version: "0.4.2"
 
 servers:
   - url: http://localhost:5001
@@ -77,6 +77,72 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "503":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+  /auth/recovery:
+    get:
+      summary: Send an e-mail with a token for changing a user's password
+      description: >-
+        Send an e-mail with a single-use time-limited token that can be used to reset the
+        password associated with that e-mail address.  The e-mail address is encoded with
+        Base64 and passed as an HTTP Bearer authentication token.  For security reasons, no
+        error responses are given (except for database connectivity issues).
+      security:
+        - AuthHTTPBearer: []
+      responses:
+        "202":
+          description: >-
+            A message has been sent to the e-mail address provided.  This message will include
+            a single-use time-limited token that will allow the user to set a new password for
+            their account.  The body of the response contains another single-use time-limited
+            token that's to be passed as the "userId" part of an HTTP Basic authentication
+            header (see this path's PATCH method).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userIdToken:
+                    type: string
+                required:
+                  - userIdToken
+        "503":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    patch:
+      summary: Change a user's password and log in.
+      description: >-
+        Change a user's password.  Set the "userId" part of HTTP Basic authentication to the
+        token that was previously returned by this path's GET method, and set the "password"
+        part to the token that was e-mailed to the user.  If successful then the user's
+        password is changed and the user is logged in (the token in the response body is the
+        bearer token that represents the user).
+      security:
+        - AuthHTTPBasic: []
+      requestBody:
+        description: The new password.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+              required:
+                - password
+      responses:
+        "200":
+          description: The password has been changed and the user is now logged in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "406":
           $ref: "#/components/responses/InvalidData"
         "503":
