@@ -14,23 +14,36 @@ function getAuthorizationData(request) {
   Authorization data is found in the request's "Authorization" header.  The actual members of
   the returned object will depend on the type of authorization in the request.
 
-  If valid HTTP Basic authorization (see RFC 7617) is found then the returned object's members
-  will be "userId" and "password".
+  +--------+------+----------+
+  | Scheme | RFC  | Members  |
+  +========+======+==========+
+  | Basic  | 7617 | userId   |
+  |        |      | password |
+  +--------+------+----------+
+  | Bearer | 6750 | token    |
+  +--------+------+----------+
   */
 
   const authorizationValue = request.header("Authorization");
-  const basicAuthorization = /^Basic (?<credentials64>\S+)$/i.exec(authorizationValue);
+  const authorization = /^(?<scheme>\S+) (?<parameters>\S+)$/i.exec(authorizationValue)?.groups;
 
-  if (basicAuthorization) {
+  if (authorization?.scheme === "Basic") {
     /*
     With HTTP Basic authorization, the credentials are in the format "<userId>:<password>" but
     encoded in Base64 (see RFC 7617 section 2 for a more detailed description).
     */
 
-    const credentialsText = Buffer.from(basicAuthorization.groups.credentials64, "base64");
+    const credentialsText = Buffer.from(authorization.parameters, "base64");
     const credentials = /^(?<userId>[^:]*):(?<password>.*)$/i.exec(credentialsText)?.groups;
 
     return credentials ? { userId: credentials.userId, password: credentials.password } : null;
+  } else if (authorization?.scheme === "Bearer") {
+    /*
+    With HTTP Bearer authorization, the token is encoded in Base64 (see RFC 6750 section 2 for
+    a more detailed description).
+    */
+
+    return { token: Buffer.from(authorization.parameters, "base64") };
   } else return null;
 }
 
