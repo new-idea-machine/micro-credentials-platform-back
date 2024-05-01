@@ -3,10 +3,10 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.4.2"
+  version: "0.5.0"
 
 servers:
-  - url: http://localhost:5001
+  - url: http://localhost/api:5001
     description: Local host
 
 paths:
@@ -18,7 +18,7 @@ paths:
         "200":
           description: Server is running.
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
         "503":
@@ -44,7 +44,7 @@ paths:
         "404":
           description: User not found.
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
         "503":
@@ -74,7 +74,7 @@ paths:
         "403":
           description: User already exists.
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
         "406":
@@ -184,7 +184,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/UserData"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "406":
@@ -203,7 +203,7 @@ paths:
         "200":
           description: User successfully deleted.
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
         "401":
@@ -224,19 +224,19 @@ components:
     CantConnectToDatabase:
       description: Can"t connect to database.
       content:
-        application/json:
+        text/plain:
           schema:
             $ref: "#/components/schemas/ServerMessage"
     InvalidData:
       description: Invalid data.
       content:
-        application/json:
+        text/plain:
           schema:
             $ref: "#/components/schemas/ServerMessage"
     Unauthorized:
       description: Not authorized.
       content:
-        application/json:
+        text/plain:
           schema:
             $ref: "#/components/schemas/ServerMessage"
 
@@ -299,9 +299,4 @@ components:
       nullable: true
 
     ServerMessage:
-      type: object
-      properties:
-        msg:
-          type: string
-      required:
-        - msg
+      type: string
