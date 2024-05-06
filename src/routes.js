@@ -1,5 +1,5 @@
 import express from "express";
-import { getAll, get, create, removeOne, update } from "./controller.js";
+import { getAll, get, create, removeOne, update, getAuth } from "./controller.js";
 
 const router = express.Router();
 
@@ -7,7 +7,9 @@ router.get("/", getAll);
 
 router.get("/user", get);
 
-router.post("/user", create);
+router.get("/auth", getAuth);
+
+router.post("/auth", create);
 
 router.patch("/user/:id", update);
 

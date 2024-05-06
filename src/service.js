@@ -1,6 +1,5 @@
 import { userModel, learnerModel, instructorModel } from "./model.js";
 
-// this file does the work for controller
 async function getAll() {
   const users = await userModel.find();
   console.log(users);
@@ -32,4 +31,45 @@ async function removeOne() {
   await userModel.deleteMany({});
 }
 
-export { getAll, get, create, updatePassword, removeOne };
+function getAuthorizationData(request) {
+  /*
+  Extract authorization data from an Express.js "Request" object and return an object
+  containing this data.  If no recognized authorization data is found then return "null".
+
+  Authorization data is found in the request's "Authorization" header.  The actual members of
+  the returned object will depend on the type of authorization in the request.
+
+  +--------+------+----------+
+  | Scheme | RFC  | Members  |
+  +========+======+==========+
+  | Basic  | 7617 | userId   |
+  |        |      | password |
+  +--------+------+----------+
+  | Bearer | 6750 | token    |
+  +--------+------+----------+
+  */
+
+  const authorizationValue = request.header("Authorization");
+  const authorization = /^(?<scheme>\S+) (?<parameters>\S+)$/i.exec(authorizationValue)?.groups;
+
+  if (authorization?.scheme === "Basic") {
+    /*
+    With HTTP Basic authorization, the credentials are in the format "<userId>:<password>" but
+    encoded in Base64 (see RFC 7617 section 2 for a more detailed description).
+    */
+
+    const credentialsText = Buffer.from(authorization.parameters, "base64");
+    const credentials = /^(?<userId>[^:]*):(?<password>.*)$/i.exec(credentialsText)?.groups;
+
+    return credentials ? { userId: credentials.userId, password: credentials.password } : null;
+  } else if (authorization?.scheme === "Bearer") {
+    /*
+    With HTTP Bearer authorization, the token is encoded in Base64 (see RFC 6750 section 2 for
+    a more detailed description).
+    */
+
+    return { token: Buffer.from(authorization.parameters, "base64") };
+  } else return null;
+}
+
+export { getAll, get, create, updatePassword, removeOne, getAuthorizationData };
