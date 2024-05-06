@@ -13,11 +13,11 @@ const learnerSchema = new mongoose.Schema({});
 const instructorSchema = new mongoose.Schema({});
 
 const userSchema = new mongoose.Schema({
-  username: String,
-  email: String,
-  password: String,
-  learnerData: mongoose.Schema({ data: { type: learnerSchema } }),
-  instructorData: mongoose.Schema({ data: { type: instructorSchema } })
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  learnerData: { type: learnerSchema, required: true },
+  instructorData: { type: instructorSchema }
 });
 
 const userModel = database.model("users", userSchema);

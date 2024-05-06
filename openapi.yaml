@@ -1,11 +1,12 @@
-openapi: 3.0.0
+openapi: 3.0.3
 info:
   title: Untapped Energy Application
-  description: An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.3.2"
+  description: >-
+    An application for better support of the ongoing learning initiatives of Untapped Energy.
+  version: "0.5.0"
 
 servers:
-  - url: http://localhost:5001
+  - url: http://localhost/api:5001
     description: Local host
 
 paths:
@@ -17,263 +18,285 @@ paths:
         "200":
           description: Server is running.
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
         "503":
-          description: Can't connect to database.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+          $ref: "#/components/responses/CantConnectToDatabase"
 
-  /user:
+  /auth:
     get:
       summary: Log a user in
       description: Log a user in.
-      parameters:
-        - name: email
-          in: query
-          description: User e-mail
-          schema:
-            type: string
-          required: true
-        - name: password
-          in: query
-          description: User password
-          schema:
-            type: string
-          required: true
+      security:
+        - AuthHTTPBasic: []
       responses:
         "200":
-          description: User logged in.
+          description: >-
+            User logged in.  The token in the response body is the bearer token that represents
+            the user.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserInfo"
-        "403":
-          description: Incorrect password.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           description: User not found.
           content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "406":
-          description: Invalid data.
-          content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
         "503":
-          description: Can't connect to database.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+          $ref: "#/components/responses/CantConnectToDatabase"
 
     post:
       summary: Add a new user.
       description: Add a new user to the system.
+      security:
+        - AuthHTTPBasic: []
       requestBody:
         description: Details of the user to be added.
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                userInfo:
-                  $ref: "#/components/schemas/UserInfo"
-                password:
-                  type: string
-                isInstructor:
-                  type: boolean
+              $ref: "#/components/schemas/RegistrationInfo"
       responses:
         "201":
-          description: User successfully added.
+          description: >-
+            User successfully added.  The token in the response body is the bearer token that
+            represents the user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        "403":
+          description: User already exists.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ServerMessage"
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "503":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+  /auth/recovery:
+    get:
+      summary: Send an e-mail with a token for changing a user's password
+      description: >-
+        Send an e-mail with a single-use time-limited token that can be used to reset the
+        password associated with that e-mail address.  The e-mail address is encoded with
+        Base64 and passed as an HTTP Bearer authentication token.  For security reasons, no
+        error responses are given (except for database connectivity issues).
+      security:
+        - AuthHTTPBearer: []
+      responses:
+        "202":
+          description: >-
+            A message has been sent to the e-mail address provided.  This message will include
+            a single-use time-limited token that will allow the user to set a new password for
+            their account.  The body of the response contains another single-use time-limited
+            token that's to be passed as the "userId" part of an HTTP Basic authentication
+            header (see this path's PATCH method).
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  userUID:
-                    $ref: "#/components/schemas/UID"
-        "403":
-          description: User already exists.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "406":
-          description: Invalid data.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+                  userIdToken:
+                    type: string
+                required:
+                  - userIdToken
         "503":
-          description: Can't connect to database.
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    patch:
+      summary: Change a user's password and log in.
+      description: >-
+        Change a user's password.  Set the "userId" part of HTTP Basic authentication to the
+        token that was previously returned by this path's GET method, and set the "password"
+        part to the token that was e-mailed to the user.  If successful then the user's
+        password is changed and the user is logged in (the token in the response body is the
+        bearer token that represents the user).
+      security:
+        - AuthHTTPBasic: []
+      requestBody:
+        description: The new password.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+              required:
+                - password
+      responses:
+        "200":
+          description: The password has been changed and the user is now logged in.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "503":
+          $ref: "#/components/responses/CantConnectToDatabase"
 
-  /user/{id}:
+  /user:
     get:
       summary: Return a specific user.
-      description: Returns information about the user identified by {id}.
-      parameters:
-        - name: id
-          in: path
-          description: User UID
-          schema:
-            type: string
-          required: true
+      description: Returns information about the user identified by the bearer token.
+      security:
+        - AuthHTTPBearer: []
       responses:
         "200":
           description: User information
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserInfo"
-        "404":
-          description: User not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "406":
-          description: Invalid data.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/UserData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "503":
-          description: Can't connect to database.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+          $ref: "#/components/responses/CantConnectToDatabase"
 
     patch:
       summary: Update a specific user.
-      description: Update information about the user identified by {id}.
-      parameters:
-        - name: id
-          in: path
-          description: User UID
-          schema:
-            type: string
-          required: true
+      description: Update information about the user identified by the bearer token.
       requestBody:
         description: Updated details of the user.
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserInfo"
+              $ref: "#/components/schemas/UserData"
+      security:
+        - AuthHTTPBearer: []
       responses:
         "200":
           description: User successfully updated.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "403":
-          description: Request denied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "404":
-          description: User not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/UserData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "406":
-          description: Invalid data.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+          $ref: "#/components/responses/InvalidData"
         "503":
-          description: Can't connect to database.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+          $ref: "#/components/responses/CantConnectToDatabase"
 
     delete:
       summary: Delete a specific user.
-      description: Removes the user identified by {id} from the system (as well as any related data).
-      parameters:
-        - name: id
-          in: path
-          description: User UID
-          schema:
-            type: string
-          required: true
+      description: >-
+        Removes the user identified by the bearer token from the system (as well as any related
+        data).
+      security:
+        - AuthHTTPBearer: []
       responses:
         "200":
           description: User successfully deleted.
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/ServerMessage"
-        "403":
-          description: Request denied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "404":
-          description: User not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "406":
-          description: Invalid data.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "503":
-          description: Can't connect to database.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
+          $ref: "#/components/responses/CantConnectToDatabase"
 
 components:
+  securitySchemes:
+    AuthHTTPBasic:
+      type: http
+      scheme: basic
+    AuthHTTPBearer:
+      type: http
+      scheme: bearer
+
+  responses:
+    CantConnectToDatabase:
+      description: Can"t connect to database.
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/ServerMessage"
+    InvalidData:
+      description: Invalid data.
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/ServerMessage"
+    Unauthorized:
+      description: Not authorized.
+      content:
+        text/plain:
+          schema:
+            $ref: "#/components/schemas/ServerMessage"
+
   schemas:
-    UserInfo:
+    RegistrationInfo:
       type: object
       properties:
-        userUID:
-          $ref: "#/components/schemas/UID"
         name:
           type: string
+        isInstructor:
+          type: boolean
+      required:
+        - password
+        - isInstructor
+
+    Credential:
+      type: object
+      properties:
+        # Naming conventions in this section comply with RFC 6749 (The OAuth 2.0 Authorization
+        # Framework) which may be used later -- see
+        # https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
+
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum:
+            - "Bearer"
+        user_data:
+          $ref: "#/components/schemas/UserData"
+      required:
+        - access_token
+        - token_type
+        - user_data
+
+    UserData:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
         email:
           type: string
+          nullable: true
+        learnerData:
+          $ref: "#/components/schemas/LearnerData"
+        instructorData:
+          $ref: "#/components/schemas/InstructorData"
       required:
         - name
         - email
+        - learnerInfo
 
-    UID:
-      oneOf:
-        - type: integer
-        - type: string
+    LearnerData:
+      type: object
+      nullable: true
+
+    InstructorData:
+      type: object
+      nullable: true
 
     ServerMessage:
-      type: object
-      properties:
-        msg:
-          type: string
-      required:
-        - msg
+      type: string
