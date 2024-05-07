@@ -3,7 +3,7 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.5.0"
+  version: "0.6.0"
 
 servers:
   - url: http://localhost/api:5001
@@ -17,11 +17,7 @@ paths:
       responses:
         "200":
           description: Server is running.
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
   /auth:
@@ -43,11 +39,7 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           description: User not found.
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     post:
@@ -73,13 +65,9 @@ paths:
                 $ref: "#/components/schemas/Credential"
         "403":
           description: User already exists.
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
         "406":
           $ref: "#/components/responses/InvalidData"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
   /auth/recovery:
@@ -109,7 +97,7 @@ paths:
                     type: string
                 required:
                   - userIdToken
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     patch:
@@ -145,7 +133,7 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "406":
           $ref: "#/components/responses/InvalidData"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
   /user:
@@ -163,7 +151,7 @@ paths:
                 $ref: "#/components/schemas/UserData"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     patch:
@@ -189,7 +177,7 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "406":
           $ref: "#/components/responses/InvalidData"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     delete:
@@ -202,13 +190,9 @@ paths:
       responses:
         "200":
           description: User successfully deleted.
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
 components:
@@ -223,22 +207,10 @@ components:
   responses:
     CantConnectToDatabase:
       description: Can"t connect to database.
-      content:
-        text/plain:
-          schema:
-            $ref: "#/components/schemas/ServerMessage"
     InvalidData:
       description: Invalid data.
-      content:
-        text/plain:
-          schema:
-            $ref: "#/components/schemas/ServerMessage"
     Unauthorized:
       description: Not authorized.
-      content:
-        text/plain:
-          schema:
-            $ref: "#/components/schemas/ServerMessage"
 
   schemas:
     RegistrationInfo:
@@ -249,7 +221,7 @@ components:
         isInstructor:
           type: boolean
       required:
-        - password
+        - name
         - isInstructor
 
     Credential:
@@ -288,7 +260,7 @@ components:
       required:
         - name
         - email
-        - learnerInfo
+        - learnerData
 
     LearnerData:
       type: object
@@ -297,6 +269,3 @@ components:
     InstructorData:
       type: object
       nullable: true
-
-    ServerMessage:
-      type: string
