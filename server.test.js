@@ -126,6 +126,25 @@ async function sendRequest(method, path, credentials, data = null) {
   return [response, result];
 }
 
+/*********************************************************************************************/
+
+function validateCredentialObject(userData, result) {
+  /*
+  Test the properties of a response body to see if it's a valid "Credential" object with
+  expected content.
+  */
+
+  expect(typeof result.access_token).toBe("string");
+  expect(result.token_type).toBe("Bearer");
+  expect(result.user_data.name).toBe(userData.userInfo.name);
+  expect(result.user_data.email).toBe(userData.credentials.email);
+  expect(typeof result.user_data.learnerData).toBe("object");
+
+  if (userData.userInfo.isInstructor)
+    expect(typeof result.user_data.instructorData).toBe("object");
+  else expect(result.user_data.instructorData).toBe(null);
+}
+
 // ============================================================================================
 // USER POST TESTS
 // ============================================================================================
@@ -347,12 +366,7 @@ test("Register New Learner User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(learnerUserData.userInfo.name);
-  expect(result.user_data.email).toBe(learnerUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(result.user_data.instructorData).toBe(null);
+  validateCredentialObject(learnerUserData, result);
 });
 
 /*********************************************************************************************/
@@ -395,12 +409,7 @@ test("Register New Instructor User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(instructorUserData.userInfo.name);
-  expect(result.user_data.email).toBe(instructorUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(typeof result.user_data.instructorData).toBe("object");
+  validateCredentialObject(instructorUserData, result);
 });
 
 /*********************************************************************************************/
@@ -501,12 +510,7 @@ test("Get an Existing Learner User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(learnerUserData.userInfo.name);
-  expect(result.user_data.email).toBe(learnerUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(result.user_data.instructorData).toBe(null);
+  validateCredentialObject(learnerUserData, result);
 });
 
 /*********************************************************************************************/
@@ -544,12 +548,7 @@ test("Get an Existing Instructor User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(instructorUserData.userInfo.name);
-  expect(result.user_data.email).toBe(instructorUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(typeof result.user_data.instructorData).toBe("object");
+  validateCredentialObject(instructorUserData, result);
 });
 
 /*********************************************************************************************/
