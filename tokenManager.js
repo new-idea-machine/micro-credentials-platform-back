@@ -7,7 +7,7 @@ function generateToken(userUid) {
   const payload = { userUid };
   const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890";
   const tokenLength = 40;
-  let token = "";
+  const token = "";
 
   do {
     token = "";
