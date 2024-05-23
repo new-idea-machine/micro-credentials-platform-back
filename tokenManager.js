@@ -1,13 +1,13 @@
 require("dotenv").config();
 const secretKey = process.env.SECRET_KEY;
-import { JWT } from "jsonwebtoken";
+import JWT from "jsonwebtoken";
 let loggedInUsers = [];
 
 function generateToken(userUid) {
-  const payload = { userUid };
-  const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890";
+  const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890+/";
   const tokenLength = 40;
-  const token = "";
+  let token = "";
+
 
   do {
     token = "";
@@ -16,21 +16,29 @@ function generateToken(userUid) {
     }
   } while (loggedInUsers.some((entry) => entry.token === token));
 
-  const jwtPayload = { userUid, token };
+  const jwtPayload = { token };
   const signedToken = JWT.sign(jwtPayload, secretKey, { expiresIn: "1h" });
   loggedInUsers.push({ token: signedToken, userUid });
 
-  return token;
+  return signedToken;
 }
 
-function getUserUid(token) {
-  const entry = loggedInUsers.find((entry) => entry.token === token);
-  return entry ? entry.userUid : null;
+
+function getUserUid(signedToken) {
+  try {
+    const decodedToken = JWT.verify(signedToken, secretKey);
+    const entry = loggedInUsers.find((entry) => entry.token === signedToken);
+    return entry ? entry.userUid : null;
+  } catch (error) {
+    console.error("Token verification failed:", error);
+    return null;
+  }
 }
 
-function logout(token) {
+
+function logout(signedToken) {
   const initialLength = loggedInUsers.length;
-  loggedInUsers = loggedInUsers.filter((entry) => entry.token !== token);
+  loggedInUsers = loggedInUsers.filter((entry) => entry.token !== signedToken);
   return loggedInUsers.length < initialLength;
 }
 
