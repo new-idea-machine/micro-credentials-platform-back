@@ -1,5 +1,9 @@
+import dotenv from "dotenv";
 import { userModel, learnerModel, instructorModel } from "./model.js";
-
+import { Client } from "@microsoft/microsoft-graph-client";
+import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js";
+import { ClientSecretCredential } from "@azure/identity";
+dotenv.config();
 async function getAll() {
   const users = await userModel.find();
   console.log(users);
@@ -72,4 +76,50 @@ function getAuthorizationData(request) {
   } else return null;
 }
 
-export { getAll, get, create, updatePassword, removeOne, getAuthorizationData };
+function passwordRecovery() {
+  const credential = new ClientSecretCredential(
+    process.env.TENANT_ID, // Directory (tenant) ID
+    process.env.APPLICATION_ID, // Application (client) ID
+    process.env.APPLICATION_SECRET // Application Secret
+  );
+
+  const authProvider = new TokenCredentialAuthenticationProvider(credential, {
+    scopes: ["https://graph.microsoft.com/.default"]
+  });
+  const client = Client.initWithMiddleware({ debugLogging: true, authProvider });
+
+  const sendMail = {
+    message: {
+      subject: "Password reset",
+      body: {
+        contentType: "Text",
+        content: "reset password here"
+      },
+      toRecipients: [
+        {
+          emailAddress: { address: process.env.EMAIL } // Recipient's e-mail address
+        }
+      ]
+    },
+    saveToSentItems: "false"
+  };
+
+  client
+    .api("/users/donotreply@untappedenergy.ca/sendMail") // Shared mailbox e-mail address
+    .header("Content-type", "application/json")
+    .post(sendMail, (err, res, rawResponse) => {
+      console.log(res);
+      console.log(rawResponse);
+      console.log(err);
+    });
+}
+
+export {
+  getAll,
+  get,
+  create,
+  updatePassword,
+  removeOne,
+  getAuthorizationData,
+  passwordRecovery
+};

@@ -121,9 +121,7 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
-    const name = req.params.id;
-    const newPassword = req.body.password;
-    res.status(201).json(await service.updatePassword(name, newPassword));
+    service.passwordRecovery();
   } catch (error) {
     res.status(503).json({ msg: "Cant reach server" });
   }
