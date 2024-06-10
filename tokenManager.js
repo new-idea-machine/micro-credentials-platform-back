@@ -14,7 +14,10 @@ function generateToken(userUid) {
     for (let i = 0; i < tokenLength; i++) {
       token += charString.charAt(Math.floor(Math.random() * charString.length));
     }
-  } while (loggedInUsers.some((entry) => entry.token === token));
+  } while (loggedInUsers.some((entry) => {
+    const decoded = JWT.verify(entry.token, secretKey);
+    return decoded.token === token;
+  }));
 
   const jwtPayload = { token };
   const signedToken = JWT.sign(jwtPayload, secretKey, { expiresIn: "1h" });
@@ -42,4 +45,21 @@ function logout(signedToken) {
   return loggedInUsers.length < initialLength;
 }
 
-export default { generateToken, getUserUid, logout };
+function removeExpiredTokens() {
+  loggedInUsers = loggedInUsers.filter((entry) => {
+    try {
+      JWT.verify(entry.token, secretKey);
+      return true;
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        return false;
+      }
+      console.error("Token verification failed:", error);
+      return true;
+    }
+  });
+
+}
+setInterval(removeExpiredTokens, 300000);
+
+export default { generateToken, getUserUid, logout, removeExpiredTokens };
