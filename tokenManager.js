@@ -4,6 +4,7 @@ import JWT from "jsonwebtoken";
 let loggedInUsers = [];
 
 function generateToken(userUid) {
+  removeExpiredTokens();
   const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890+/";
   const tokenLength = 40;
   let token = "";
@@ -14,24 +15,26 @@ function generateToken(userUid) {
     for (let i = 0; i < tokenLength; i++) {
       token += charString.charAt(Math.floor(Math.random() * charString.length));
     }
-  } while (loggedInUsers.some((entry) => {
-    const decoded = JWT.verify(entry.token, secretKey);
-    return decoded.token === token;
-  }));
+  } while (loggedInUsers.some((entry) => entry.token === token));
 
   const jwtPayload = { token };
   const signedToken = JWT.sign(jwtPayload, secretKey, { expiresIn: "1h" });
-  loggedInUsers.push({ token: signedToken, userUid });
+  loggedInUsers.push({token, userUid, lastAccessed: new Date() });
 
   return signedToken;
 }
 
 
 function getUserUid(signedToken) {
+  removeExpiredTokens();
   try {
     const decodedToken = JWT.verify(signedToken, secretKey);
-    const entry = loggedInUsers.find((entry) => entry.token === signedToken);
-    return entry ? entry.userUid : null;
+    const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
+    if (entry) {
+      entry.lastAccessed = new Date();
+      return entry.userUid;
+    }
+    return null;
   } catch (error) {
     console.error("Token verification failed:", error);
     return null;
@@ -40,9 +43,16 @@ function getUserUid(signedToken) {
 
 
 function logout(signedToken) {
+  removeExpiredTokens();
+  try {
+  const decodedToken = JWT.verify(signedToken, secretKey);
   const initialLength = loggedInUsers.length;
-  loggedInUsers = loggedInUsers.filter((entry) => entry.token !== signedToken);
+  loggedInUsers = loggedInUsers.filter((entry) => entry.token !== decodedToken.token);
   return loggedInUsers.length < initialLength;
+} catch (error) {
+  console.error("Token verification failed during logout:", error);
+  return false;
+}
 }
 
 function removeExpiredTokens() {
@@ -60,6 +70,28 @@ function removeExpiredTokens() {
   });
 
 }
-setInterval(removeExpiredTokens, 300000);
 
-export default { generateToken, getUserUid, logout, removeExpiredTokens };
+function tokenMiddleware(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decodedToken = JWT.verify(token, secretKey);
+      const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
+      if (entry) {
+        entry.lastAccessed = new Date();
+        req.userUid = entry.userUid;
+      } else {
+        req.userUid = null;
+      }
+    } catch (error) {
+      console.error("Token verification failed:", error);
+      req.userUid = null;
+    }
+  } else {
+    req.userUid = null;
+  }
+  next();
+}
+
+export default { generateToken, getUserUid, logout, removeExpiredTokens, tokenMiddleware };
