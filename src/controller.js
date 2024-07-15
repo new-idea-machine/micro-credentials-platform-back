@@ -1,6 +1,7 @@
 import { userModel } from "./model.js";
 import validator from "validator";
 import * as service from "./service.js";
+import { reverseMultiplyAndSum } from "validator/lib/util/algorithms.js";
 
 async function getAll(req, res) {
   try {
@@ -121,7 +122,8 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
-    service.passwordRecovery();
+    const email = req.params.id
+    service.passwordRecovery(email);
   } catch (error) {
     res.status(503).json({ msg: "Cant reach server" });
   }
@@ -144,4 +146,18 @@ async function removeOne(req, res) {
     });
 }
 
-export { getAll, get, create, removeOne, update, getAuth };
+async function resetPasswordReceiver (req,res){
+  const  token  = req.params.token;
+  console.log(token)
+  const user = await userModel.findOne({resetToken:token})
+  // Check if the token exists and is still valid
+  if (true ===true)//(users.some(user => user.resetToken === token)) {
+    // Render a form for the user to enter a new password
+    {console.log(user)
+    res.send('<form method="post" action="/reset-password"><input type="password" name="password" required><input type="submit" value="Reset Password"></form>');
+  } else {
+    res.status(404).send('Invalid or expired token');
+  }
+}
+
+export { getAll, get, create, removeOne, update, getAuth, resetPasswordReceiver };

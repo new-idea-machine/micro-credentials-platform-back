@@ -3,6 +3,7 @@ import { userModel, learnerModel, instructorModel } from "./model.js";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js";
 import { ClientSecretCredential } from "@azure/identity";
+import crypto from 'crypto'
 dotenv.config();
 async function getAll() {
   const users = await userModel.find();
@@ -76,7 +77,7 @@ function getAuthorizationData(request) {
   } else return null;
 }
 
-function passwordRecovery() {
+async function passwordRecovery(account) {
   const credential = new ClientSecretCredential(
     process.env.TENANT_ID, // Directory (tenant) ID
     process.env.APPLICATION_ID, // Application (client) ID
@@ -87,13 +88,18 @@ function passwordRecovery() {
     scopes: ["https://graph.microsoft.com/.default"]
   });
   const client = Client.initWithMiddleware({ debugLogging: true, authProvider });
-
+    // Generate a reset token
+    const token = crypto.randomBytes(20).toString('hex');
+    // Store the token with the user's email in a database or in-memory store
+    await userModel.updateOne({ email:account }, { resetToken:token });
+    // Send the reset token to the user's email
   const sendMail = {
     message: {
-      subject: "Password reset",
+      subject: 'Password Reset',
       body: {
         contentType: "Text",
-        content: "reset password here"
+        content: `Click the following link to reset your password: http://localhost:5001/reset-password/${token}`,
+    
       },
       toRecipients: [
         {
@@ -113,6 +119,10 @@ function passwordRecovery() {
       console.log(err);
     });
 }
+
+
+
+
 
 export {
   getAll,
