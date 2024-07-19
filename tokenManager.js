@@ -1,12 +1,12 @@
 import "dotenv/config";
 import JWT from "jsonwebtoken";
+
 const secretKey = process.env.SECRET_KEY;
 let loggedInUsers = [];
 
 function generateToken(userUid) {
   removeExpiredTokens();
-  const charString =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890+/";
+  const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890+/";
   const tokenLength = 40;
   let token = "";
 
@@ -37,7 +37,7 @@ function getUserUid(signedToken) {
     }
     return null;
   } catch (error) {
-    console.error("Token verification failed:", error);
+    console.warn("Token verification failed:", error);
     return null;
   }
 }
@@ -52,7 +52,7 @@ function logout(signedToken) {
     );
     return loggedInUsers.length < initialLength;
   } catch (error) {
-    console.error("Token verification failed during logout:", error);
+    console.warn("Token verification failed during logout:", error);
     return false;
   }
 }
@@ -66,7 +66,7 @@ function removeExpiredTokens() {
       if (error.name === "TokenExpiredError") {
         return false;
       }
-      console.error("Token verification failed:", error);
+      console.warn("Token verification failed:", error);
       return true;
     }
   });
@@ -75,19 +75,23 @@ function removeExpiredTokens() {
 function tokenMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (authHeader) {
-    let token = null;
-    if (/^Bearer +(?<token>\S+)$/.exec(authHeader)?.groups?.token) {
-      token = /^Bearer +(?<token>\S+)$/.exec(authHeader).groups.token;
-    } else if (/^Basic +(?<token>\S+)$/.exec(authHeader)?.groups?.token) {
-      token = /^Basic +(?<token>\S+)$/.exec(authHeader).groups.token;
-    }
+    const authHeaderFormat = /^(?<scheme>\S+) +(?<parameters>\S+)$/;
+    const authorization = authHeaderFormat.exec(authHeader)?.groups;
 
-    if (token) {
+    if (authorization?.scheme === "Basic") {
+      const basicAuthCredentialsFormat = /^(?<userId>[^:]*):(?<password>.*)$/;
+      const credentialsText = Buffer.from(authorization.parameters, "base64").toString();
+      const credentials = basicAuthCredentialsFormat.exec(credentialsText)?.groups;
+
+      if (credentials) {
+        req.userId = credentials.userId;
+        req.password = credentials.password;
+      }
+    } else if (authorization?.scheme === "Bearer") {
+      const token = authorization.parameters;
       try {
         const decodedToken = JWT.verify(token, secretKey);
-        const entry = loggedInUsers.find(
-          (entry) => entry.token === decodedToken.token
-        );
+        const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
         if (entry) {
           entry.lastAccessed = new Date();
           req.userUid = entry.userUid;
@@ -95,11 +99,9 @@ function tokenMiddleware(req, res, next) {
           req.userUid = null;
         }
       } catch (error) {
-        console.error("Token verification failed:", error);
+        console.warn("Token verification failed:", error);
         req.userUid = null;
       }
-    } else {
-      req.userUid = null;
     }
   } else {
     req.userUid = null;
