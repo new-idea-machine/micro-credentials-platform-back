@@ -28,6 +28,16 @@ User GET Tests
  5. Get the same learner user using the wrong password.
  6. Get an existing instructor user.
  7. Get the same instructor user using the wrong password.
+
+
+User Profile POST Tests
+-----------------------
+
+ 1. Create a user profile with the specified email address in headers.
+ 2. Create a user profile with a non existing user in the database.
+ 3. Create a user profile with a user profile already in the database.
+ 4. Create a user profile with a missing firstname.
+ 5. Create a user profile with a missing lastname.
 */
 
 /*
