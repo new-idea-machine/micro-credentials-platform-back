@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { userProfileModel } from "../Models/UserProfileModel.js";
 import { userModel } from "../Models/model.js";
 import { CustomError } from "../Utils/CustomError.js";
@@ -22,6 +23,7 @@ async function getProfile(req, res) {
       }
     } catch (err) {
       if (err instanceof CustomError) throw err;
+      // Handle gateway timeout error
       res.status(504).send();
     }
   } catch (err) {
@@ -69,7 +71,10 @@ async function createProfile(req, res, next) {
       res.status(201).json(createdUserProfile);
     } catch (error) {
       if (error instanceof CustomError) throw error;
-      res.status(504).send();
+      else if (error instanceof mongoose.Error.ValidationError)
+        throw new CustomError(Object.values(error.errors).toString(), "ValidationError", 400);
+      // Handle gateway timeout error
+      res.status(504).send(error.message || error);
     }
   } catch (err) {
     res.status(err.status_code).send({ Type: err.name, Error: err.message });
@@ -100,6 +105,9 @@ async function updateProfile(req, res, next) {
       }
     } catch (error) {
       if (error instanceof CustomError) throw error;
+      else if (error instanceof mongoose.Error.ValidationError)
+        throw new CustomError(Object.values(error.errors).toString(), "ValidationError", 400);
+      // Handle gateway timeout error
       res.status(504).send();
     }
   } catch (err) {
@@ -128,6 +136,7 @@ async function deleteProfile(req, res, next) {
       }
     } catch (error) {
       if (error instanceof CustomError) throw error;
+      // Handle gateway timeout error
       res.status(504).send();
     }
   } catch (err) {

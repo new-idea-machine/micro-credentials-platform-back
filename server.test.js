@@ -38,6 +38,14 @@ User Profile POST Tests
  3. Create a user profile with a user profile already in the database.
  4. Create a user profile with a missing firstname.
  5. Create a user profile with a missing lastname.
+
+ User Profile GET Tests
+ ----------------------
+ 1. Get a user profile with the specified email address in headers.
+ 2. Get a user profile with no authorization headers provided.
+ 3. Get a user profile with a non-existent user in the database.
+ 4. Get a user profile for an existing user in the database.
+
 */
 
 /*
@@ -580,3 +588,172 @@ test("Get the Same Instructor User Using Wrong Password", async function () {
   expect(response?.status).toBe(401);
   expect(result).toBe(undefined);
 });
+
+// ============================================================================================
+// USER PROFILE POST TESTS
+// ============================================================================================
+
+/* Create mock data for testing purposes */
+
+userProfileData = {
+  credentials: {
+    email: `learner_${Date.now()}@test.user`,
+    password: "T35t^U$er"
+  },
+  data: {
+    firstName: "John",
+    lastName: "Doe"
+  }
+};
+
+/*********************************************************************************************/
+/*Test 1: Create a user profile with a missing lastname.
+
+EXPECTED RESULT: Fail (status 400)
+*/
+test("Create User Profile with Missing Lastname", async function () {
+  const data = structuredClone(userProfileData.data);
+  delete data["lastName"];
+
+  const [response, result] = await sendRequest(
+    "POST",
+    "/profile",
+    userProfileData.credentials,
+    data
+  );
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(400);
+  expect(result).toHaveProperty("Type", "ValidationError");
+});
+
+/*********************************************************************************************/
+/*
+Test 2: Create a user profile with a missing firstname.
+
+EXPECTED RESULT:  Fail (status 400).
+*/
+test("Create User Profile with Missing Firstname", async function () {
+  const data = structuredClone(userProfileData.data);
+  delete data["firstName"];
+
+  const [response, result] = await sendRequest(
+    "POST",
+    "/profile",
+    userProfileData.credentials,
+    data
+  );
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(400);
+  expect(result).toHaveProperty("Type", "ValidationError");
+});
+
+/*
+ * Test 3:  Create a user profile with the specified email address in headers.
+ *
+ * EXPECTED RESULT:  Success (status 201).
+ */
+test("Create User Profile with Existing Email", async function () {
+  const [response, result] = await sendRequest(
+    "POST",
+    "/profile",
+    userProfileData.credentials,
+    userProfileData.data
+  );
+
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(201);
+  expect(result).not.toBe(undefined);
+});
+
+/*********************************************************************************************/
+/*
+Test 4:  Create a user profile with a non existing user in the database.
+ *
+ * EXPECTED RESULT:  Fail (status 404).
+ */
+test("Create User Profile with Non-Existing User", async function () {
+  const credentials = structuredClone(userProfileData.credentials);
+  credentials.email = "-" + credentials.email;
+
+  const [response, result] = await sendRequest(
+    "POST",
+    "/profile",
+    credentials,
+    userProfileData.data
+  );
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(404);
+  expect(result).toHaveProperty("Type", "NotFoundError");
+});
+
+/*********************************************************************************************/
+/*
+Test 5: Create a user profile with a user profile already in the database.
+
+EXPECTED RESULT: Conflict (status 409).
+*/
+test("Create a user profile with a user profile already existing in the database", async function () {
+  const [response, result] = await sendRequest(
+    "POST",
+    "/profile",
+    userProfileData.credentials,
+    userProfileData.data
+  );
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(409);
+  expect(result).not.toBe(undefined);
+});
+
+// ============================================================================================
+// USER PROFILE GET TESTS
+// ============================================================================================
+
+/*Test 1: Get a user profile with the specified email address in headers.
+
+EXPECTED RESULT: Success (status 200)
+*/
+
+test("Get a user profile with the specified email address in headers.", async function () {
+  const [response, result] = await sendRequest("GET", "/profile", userProfileData.credentials);
+
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(result).not.toBe(undefined);
+});
+
+/*********************************************************************************************/
+/*Test 2: Get a user profile with no authorization headers provided
+
+EXPECTED RESULT: Unauthorized (status 401)
+*/
+
+test("Get a user profile with no authorization headers provided.", async function () {
+  const [response, result] = await sendRequest("GET", "/profile");
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(401);
+  expect(result).toHaveProperty("Type", "AuthorizationError");
+});
+
+/*********************************************************************************************/
+/*
+Test 3: Get a user profile with a non-exitent user in the database
+
+EXPECTED RESULT: Not found (status 404)
+*/
+
+test("Get a user profile with a non-existent user in the database.", async function () {
+  const credentials = structuredClone(userProfileData.credentials);
+  credentials.email = "-" + credentials.email;
+
+  const [response, result] = await sendRequest("GET", "/profile", credentials);
+
+  expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(404);
+  expect(result).toHaveProperty("Type", "NotFoundError");
+});
+
+/*********************************************************************************************/

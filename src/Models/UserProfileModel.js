@@ -5,7 +5,7 @@ dotenv.config();
 
 const connectionString = process.env.MONGO_URL;
 
-console.log(`Connected to ${connectionString}`);
+// console.log(`Connected to ${connectionString}`);
 
 const database = await mongoose.connect(connectionString);
 

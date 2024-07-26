@@ -5,8 +5,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "jest",
-    "dev": "nodemon server.js"
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
