@@ -2,6 +2,11 @@ import "dotenv/config";
 import JWT from "jsonwebtoken";
 
 const secretKey = process.env.SECRET_KEY;
+
+if (!secretKey) {
+  throw new Error("SECRET_KEY is not defined in the environment variables.");
+}
+
 let loggedInUsers = [];
 
 function generateToken(userUid) {
@@ -99,7 +104,6 @@ function tokenMiddleware(req, res, next) {
           req.userUid = null;
         }
       } catch (error) {
-        console.warn("Token verification failed:", error);
         req.userUid = null;
       }
     }
@@ -108,5 +112,6 @@ function tokenMiddleware(req, res, next) {
   }
   next();
 }
+
 
 export { generateToken, getUserUid, logout, tokenMiddleware };
