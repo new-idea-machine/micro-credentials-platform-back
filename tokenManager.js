@@ -77,7 +77,7 @@ function removeExpiredTokens() {
   });
 }
 
-function tokenMiddleware(req, res, next) {
+function authenticationMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
   if (authHeader) {
     const authHeaderFormat = /^(?<scheme>\S+) +(?<parameters>\S+)$/;
@@ -93,9 +93,9 @@ function tokenMiddleware(req, res, next) {
         req.password = credentials.password;
       }
     } else if (authorization?.scheme === "Bearer") {
-      const token = authorization.parameters;
+      const bearerToken = authorization.parameters;
       try {
-        const decodedToken = JWT.verify(token, secretKey);
+        const decodedToken = JWT.verify(bearerToken, secretKey);
         const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
         if (entry) {
           entry.lastAccessed = new Date();
@@ -114,4 +114,4 @@ function tokenMiddleware(req, res, next) {
 }
 
 
-export { generateToken, getUserUid, logout, tokenMiddleware };
+export { generateToken, getUserUid, logout, authenticationMiddleware };
