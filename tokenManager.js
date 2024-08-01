@@ -3,7 +3,7 @@ import JWT from "jsonwebtoken";
 
 const secretKey = process.env.SECRET_KEY;
 
-if (!secretKey) {
+if (secretKey === undefined || secretKey === null || secretKey === "") {
   throw new Error("SECRET_KEY is not defined in the environment variables.");
 }
 
