@@ -1,27 +1,29 @@
-import mongoose from "mongoose";
-import dotenv from "dotenv";
+// Deprecated
 
-dotenv.config();
+// import mongoose from "mongoose";
+// import dotenv from "dotenv";
 
-const connectionString = process.env.MONGO_URL;
+// dotenv.config();
 
-console.log(`Connected to ${connectionString}`);
+// const connectionString = process.env.MONGO_URL;
 
-const database = await mongoose.connect(connectionString);
+// console.log(`Connected to ${connectionString}`);
 
-const learnerSchema = new mongoose.Schema({});
-const instructorSchema = new mongoose.Schema({});
+// const database = await mongoose.connect(connectionString);
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  learnerData: { type: learnerSchema, required: true },
-  instructorData: { type: instructorSchema }
-});
+// const learnerSchema = new mongoose.Schema({});
+// const instructorSchema = new mongoose.Schema({});
 
-const userModel = database.model("users", userSchema);
-const learnerModel = database.model("learner", learnerSchema);
-const instructorModel = database.model("instructor", instructorSchema);
+// const userSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+//   email: { type: String, required: true, unique: true },
+//   password: { type: String, required: true },
+//   learnerData: { type: learnerSchema, required: true },
+//   instructorData: { type: instructorSchema }
+// });
 
-export { userModel, learnerModel, instructorModel };
+// const userModel = database.model("users", userSchema);
+// const learnerModel = database.model("learner", learnerSchema);
+// const instructorModel = database.model("instructor", instructorSchema);
+
+// export { userModel, learnerModel, instructorModel };
