@@ -91,6 +91,7 @@ function authenticationMiddleware(req, res, next) {
       if (credentials) {
         req.userId = credentials.userId;
         req.password = credentials.password;
+        console.log(`Basic auth - UserID: ${req.userId}`);
       }
     } else if (authorization?.scheme === "Bearer") {
       const bearerToken = authorization.parameters;
@@ -100,18 +101,21 @@ function authenticationMiddleware(req, res, next) {
         if (entry) {
           entry.lastAccessed = new Date();
           req.userUid = entry.userUid;
+          console.log(`Bearer auth - UserUID: ${req.userUid}`);
         } else {
-          req.userUid = null;
+          console.log("Bearer auth - Invalid token");
+          return res.status(401).json({ error: "Unauthorized" });
         }
       } catch (error) {
-        req.userUid = null;
+        console.log(`Bearer auth - Token verification failed: ${error.message}`);
+        return res.status(401).json({ error: "Unauthorized" });
       }
     }
   } else {
-    req.userUid = null;
+    console.log("No authorization header");
+    return res.status(401).json({ error: "Unauthorized" });
   }
   next();
 }
-
 
 export { generateToken, getUserUid, logout, authenticationMiddleware };
