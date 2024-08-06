@@ -195,6 +195,100 @@ paths:
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
+  /profile:
+    get:
+      deprecated: false
+      tags:
+        - Profile
+      summary: Get user-profile information.
+      description: >-
+        Returns user-profile information for the user identified by the bearer token.
+      security:
+        - AuthHTTPBearer: []
+      responses:
+        "200":
+          description: User-profile information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+    post:
+      deprecated: false
+      tags:
+        - Profile
+      summary: Create user-profile information.
+      description: >-
+        Creates user-profile information for the user identified by the bearer token.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: User-profile information to be created.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfile"
+      responses:
+        "201":
+          description: User-profile information successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    patch:
+      tags:
+        - Profile
+      summary: Update user-profile information.
+      description: >-
+        Updates user-profile information for the user identified by the bearer token.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: Updated user-profile information.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfile"
+      responses:
+        "200":
+          description: User-profile information successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    delete:
+      tags:
+        - Profile
+      summary: Delete user-profile information.
+      description: >-
+        Deletes user-profile information for the user identified by the bearer token.
+      security:
+        - AuthHTTPBearer: []
+      responses:
+        "200":
+          description: User-profile information successfully deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
 components:
   securitySchemes:
     AuthHTTPBasic:
@@ -413,3 +507,24 @@ components:
         - explanation
         - creationTime
         - updateTime
+
+    UserProfile:
+      type: object
+      properties:
+        UID:
+          type: string
+        FirstName:
+          type: string
+        LastName:
+          type: string
+        Email:
+          type: string
+        Data:
+          $ref: "#/components/schemas/LearnerData"
+          nullable: true
+        UserUId:
+          type: string
+      required:
+        - FirstName
+        - LastName
+        - Email

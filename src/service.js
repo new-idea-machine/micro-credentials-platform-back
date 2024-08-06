@@ -1,4 +1,4 @@
-import { userModel, learnerModel, instructorModel } from "./model.js";
+import { userModel, learnerModel, instructorModel } from "./Models/model.js";
 
 async function getAll() {
   const users = await userModel.find();

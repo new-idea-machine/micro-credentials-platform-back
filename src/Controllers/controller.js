@@ -1,6 +1,6 @@
-import { userModel } from "./model.js";
+import { userModel } from "../Models/model.js";
 import validator from "validator";
-import * as service from "./service.js";
+import * as service from "../service.js";
 
 async function getAll(req, res) {
   try {
@@ -12,7 +12,7 @@ async function getAll(req, res) {
 }
 
 async function get(req, res) {
-  const authorizationData = getAuthorizationData(req);
+  const authorizationData = service.getAuthorizationData(req);
   if (!authorizationData?.userId) {
     res.setHeader("WWW-Authenticate", 'Basic realm="user"');
     res.status(401).send();
