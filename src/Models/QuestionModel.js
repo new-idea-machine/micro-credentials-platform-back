@@ -14,8 +14,6 @@ const questionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const questionModel = mongoose.model("Question", questionSchema);
-
 questionSchema.pre("validate", function (next) {
   // Checks for options: The length of options must be between 2 and 26
   if (this.options.length < 2 || this.options.length > 26) {
@@ -27,5 +25,7 @@ questionSchema.pre("validate", function (next) {
   }
   next();
 });
+
+const questionModel = mongoose.model("Question", questionSchema, "Courses");
 
 export { questionModel, questionSchema };

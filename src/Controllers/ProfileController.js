@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { userProfileModel } from "../Models/UserProfileModel.js";
-import { userModel } from "../Models/model.js";
+import { userModel } from "../Models/UserModel.js";
 import { CustomError } from "../Utils/CustomError.js";
 import * as service from "../service.js";
 

@@ -1,4 +1,4 @@
-import { userModel } from "../Models/model.js";
+import { userModel } from "../Models/UserModel.js";
 import validator from "validator";
 import * as service from "../service.js";
 
@@ -95,8 +95,12 @@ async function create(req, res) {
       name: user.name,
       email: authorizationData.userId,
       password: authorizationData.password,
-      learnerData: {},
-      instructorData: user.isInstructor ? {} : null
+      learnerData: user.isInstructor ? null : user.leanerData ? user.leanerData : null,
+      instructorData: user.isInstructor
+        ? user.instructorData
+          ? user.instructorData
+          : null
+        : null
     });
     try {
       const newDocument = await registrant.save();
@@ -116,6 +120,7 @@ async function create(req, res) {
       if (error?.code === duplicateKeyError) {
         res.status(403).send();
       } else if (error?.name === "ValidationError" || error?.name === "CastError") {
+        console.log(error);
         res.status(406).send();
       } else {
         res.status(504).send();
