@@ -205,8 +205,8 @@ Course model tests
 ================================================================*/
 describe("Course: Insert", () => {
   const instructor = {
-    name: "John Doe",
-    email: "johndoe@example.com",
+    name: "John Wick",
+    email: "johnwick@example.com",
     password: "123456789"
   };
 

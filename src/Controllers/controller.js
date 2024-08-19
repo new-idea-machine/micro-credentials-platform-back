@@ -51,9 +51,17 @@ async function getAuth(req, res) {
   } else {
     try {
       const user = await userModel.findOne({ email: authorizationData.userId }).lean();
+
       if (!user) {
         res.status(404).send();
-      } else if (authorizationData.password !== user.password) {
+      }
+
+      // Compare the provided password with the stored hashed password
+      const isPasswordMatch = await userModel
+        .findById(user._id)
+        .then((u) => u.comparePassword(authorizationData.password));
+
+      if (!isPasswordMatch) {
         res.setHeader("WWW-Authenticate", 'Basic realm="user"');
         res.status(401).send();
       } else {
