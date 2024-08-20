@@ -595,7 +595,7 @@ test("Get the Same Instructor User Using Wrong Password", async function () {
 
 /* Create mock data for testing purposes */
 
-userProfileData = {
+const userProfileData = {
   credentials: {
     email: `learner_${Date.now()}@test.user`,
     password: "T35t^U$er"

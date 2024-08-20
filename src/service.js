@@ -1,7 +1,7 @@
 // import { userModel, learnerModel, instructorModel } from "./Models/model.js";
 import { userModel } from "./Models/UserModel.js";
-import { learnerDataModel } from "./Models/LearnerDataModel.js";
-import { instructorDataModel } from "./Models/InstructorDataModel.js";
+// import { learnerDataModel } from "./Models/LearnerDataModel.js";
+// import { instructorDataModel } from "./Models/InstructorDataModel.js";
 
 async function getAll() {
   const users = await userModel.find();
@@ -18,8 +18,8 @@ async function create(user) {
     username: user.userInfo.name,
     email: user.userInfo.email,
     password: user.password,
-    learnerData: new learnerDataModel({}),
-    instructorData: user.isInstructor ? new instructorDataModel({}) : null
+    learnerData: {},
+    instructorData: user.isInstructor ? {} : null
   });
   const newDocument = await registrant.save();
   return { userUID: newDocument._id };

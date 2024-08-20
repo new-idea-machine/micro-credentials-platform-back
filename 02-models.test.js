@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { userModel } from "./src/Models/UserModel.js";
-import { moduleModel } from "./src/Models/ModuleModel";
+import { moduleModel } from "./src/Models/ModuleModel.js";
 import { questionModel } from "./src/Models/QuestionModel.js";
 import { assessmentModel } from "./src/Models/AssessmentModel.js";
 import { courseModel } from "./src/Models/CourseModel.js";
+// import { instructorDataModel } from "./src/Models/InstructorDataModel.js";
+// import { learnerDataModel } from "./src/Models/LearnerDataModel.js";
 
 // Set up the environment
 dotenv.config();
@@ -52,7 +54,7 @@ describe("Modules: Insert", () => {
     const badModule = structuredClone(newModule);
     badModule.type = "Video";
     delete badModule.chapters;
-    const module = await new moduleModel(badModule);
+    const module = new moduleModel(badModule);
     await expect(module.save()).rejects.toThrow(/Chapters field/);
   });
 
@@ -60,14 +62,14 @@ describe("Modules: Insert", () => {
     // Removing chapters from the module
     const badModule = structuredClone(newModule);
     delete badModule.chapters;
-    const module = await new moduleModel(badModule);
+    const module = new moduleModel(badModule);
     await expect(module.save()).rejects.toThrow(/Chapters field/);
   });
 
   test("should not insert a Markdown module with Chapters", async () => {
     const badModule = structuredClone(newModule);
     badModule.type = "Markdown";
-    const module = await new moduleModel(badModule);
+    const module = new moduleModel(badModule);
     await expect(module.save()).rejects.toThrow(/Chapters field cannot be present/);
   });
 
@@ -201,12 +203,12 @@ describe("Assessment: Insert", () => {
 });
 
 /*================================================================
-Course model tests
+Course, User and InstructorData model tests
 ================================================================*/
-describe("Course: Insert", () => {
+describe("Course, User and InstructorData: Insert", () => {
   const instructor = {
-    name: "John Doe",
-    email: "johndoe@example.com",
+    name: "Test Instructor User",
+    email: `instructor_${Date.now()}@test.user`,
     password: "123456789"
   };
 
@@ -247,10 +249,16 @@ describe("Course: Insert", () => {
     title: "Test Course",
     description: "Test Course description",
     instructor: null,
-    components: [],
-    currentComponent: 1,
-    credentialEarned: false
+    components: []
   };
+
+  afterEach(async () => {
+    await userModel.deleteMany({});
+    await moduleModel.deleteMany({});
+    await questionModel.deleteMany({});
+    await assessmentModel.deleteMany({});
+    await courseModel.deleteMany({});
+  });
 
   test("should insert a new course", async () => {
     const savedInstructor = await new userModel(instructor).save();
@@ -259,29 +267,149 @@ describe("Course: Insert", () => {
     const savedQuestion2 = await new questionModel(question2).save();
     const savedAssessment = await new assessmentModel({
       title: "Test Assessment",
-      questions: [savedQuestion1._id, savedQuestion2._id]
+      questions: [savedQuestion1, savedQuestion2]
     }).save();
 
     const course = await new courseModel({
       ...newCourse,
       instructor: savedInstructor._id,
-      components: [savedModule._id, savedAssessment._id]
+      components: [savedModule, savedAssessment]
     }).save();
+    const instructorData = {
+      courses: [course.id]
+    };
+
+    await userModel.updateOne({ email: instructor.email }, { instructorData: instructorData });
 
     expect(course._id).toBeDefined();
     expect(course.title).toBe("Test Course");
     expect(course.instructor).toBe(savedInstructor._id);
     expect(course.components.length).toBe(2);
-    expect(course.currentComponent).toBe(1);
-    expect(course.credentialEarned).toBe(false);
     expect(course.createdAt).toBeDefined();
+  });
+});
 
-    // Delete the saved components, questions, assessments, and course
-    await moduleModel.deleteOne({ _id: savedModule._id });
-    await questionModel.deleteOne({ _id: savedQuestion1._id });
-    await questionModel.deleteOne({ _id: savedQuestion2._id });
-    await assessmentModel.deleteOne({ _id: savedAssessment._id });
-    await userModel.deleteOne({ _id: savedInstructor._id });
-    await courseModel.deleteOne({ _id: course._id });
+/*================================================================
+Course, User and LearnerData model tests
+================================================================*/
+describe("Course, User and LearnerData: Insert", () => {
+  const instructor = {
+    name: "Test Instructor User",
+    email: `instructor_${Date.now()}@test.user`,
+    password: "123456789"
+  };
+
+  const learner = {
+    name: "Test Learner User",
+    email: `learner_${Date.now()}@gmail.com`,
+    password: "123456789"
+  };
+
+  const module = {
+    title: "Test Module",
+    description: "This is a test module",
+    type: "Audio",
+    chapters: [
+      { title: "Chapter 1", timeIndex: 120 },
+      { title: "Chapter 2", timeIndex: 180 }
+    ],
+    url: "https://example.com/test-module",
+    urlAuthentication: { scheme: "https", parameters: "token=123" },
+    completed: false
+  };
+
+  const question1 = {
+    question: "What is the capital of France?",
+    options: ["Paris", "Berlin", "Madrid", "London"],
+    answer: 0,
+    correctOption: 0,
+    explanation: "Paris is the capital of France"
+  };
+  const question2 = {
+    question: "Who was the first person to climb Mount Everest?",
+    options: ["Alexander the Great", "Mohammad Ali", "Everest", "Edmund Hillary"],
+    answer: 3,
+    correctOption: 3,
+    explanation: "Edmund Hillary was the first person to climb Mount Everest"
+  };
+  const newAssessment = {
+    title: "Test Assessment",
+    questions: [],
+    currentQuestion: 1
+  };
+
+  const newCourse = {
+    title: "Test Course",
+    description: "Test Course description",
+    instructor: null,
+    components: []
+  };
+
+  afterAll(async () => {
+    await userModel.deleteMany({});
+    await moduleModel.deleteMany({});
+    await questionModel.deleteMany({});
+    await assessmentModel.deleteMany({});
+    await courseModel.deleteMany({});
+  });
+
+  test("should insert a new course", async () => {
+    const savedInstructor = await new userModel(instructor).save();
+    await new userModel(learner).save();
+    const savedModule = await new moduleModel(module).save();
+    const savedQuestion1 = await new questionModel(question1).save();
+    const savedQuestion2 = await new questionModel(question2).save();
+    const savedAssessment = await new assessmentModel({
+      title: "Test Assessment",
+      questions: [savedQuestion1, savedQuestion2]
+    }).save();
+
+    const courseInstructor = await new courseModel({
+      ...newCourse,
+      instructor: savedInstructor._id,
+      components: [savedModule, savedAssessment]
+    }).save();
+    const instructorData = {
+      courses: [courseInstructor.id]
+    };
+
+    await userModel.updateOne({ email: instructor.email }, { instructorData: instructorData });
+
+    const courseLearner = await new courseModel({
+      ...newCourse,
+      instructor: savedInstructor._id,
+      components: [savedModule, savedAssessment],
+      currentComponent: 1,
+      credentialEarned: true
+    }).save();
+    const learnerData = {
+      courses: [courseLearner.id]
+    };
+    await userModel.updateOne({ email: learner.email }, { learnerData: learnerData });
+
+    expect(courseLearner._id).toBeDefined();
+    expect(courseLearner.title).toBe("Test Course");
+    expect(courseLearner.instructor).toBe(savedInstructor._id);
+    expect(courseLearner.components.length).toBe(2);
+    expect(courseLearner.currentComponent).toBe(1);
+    expect(courseLearner.credentialEarned).toBe(true);
+    expect(courseLearner.createdAt).toBeDefined();
+  });
+
+  test("should not insert a new course", async () => {
+    const savedInstructor = await userModel.findOne({ email: instructor.email });
+
+    const course = new courseModel({
+      title: "Test Course",
+      description: "Test Course description",
+      instructor: savedInstructor._id,
+      components: [],
+      currentComponent: 1,
+      credentialEarned: false
+    });
+
+    await expect(course.save()).rejects.toThrow(
+      /Component length must be atleast 0 and no greater than 0/
+    );
   });
 });
