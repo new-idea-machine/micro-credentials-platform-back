@@ -13,6 +13,8 @@ const database = await mongoose.connect(connectionString);
 const learnerSchema = new mongoose.Schema({});
 const instructorSchema = new mongoose.Schema({});
 
+const SALT_ROUNDS = 10;
+
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -25,9 +27,8 @@ const userSchema = new mongoose.Schema({
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     try {
-      const hashedPassword = await bcrypt.hash(this.password, 10);
-      this.password = hashedPassword;
-      this.set(`password`, this.password);
+      const salt = await bcrypt.genSalt(SALT_ROUNDS);
+      this.password = await bcrypt.hash(this.password, salt);
     } catch (err) {
       next(err); // Pass any errors to the next middleware
     }

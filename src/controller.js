@@ -55,11 +55,10 @@ async function getAuth(req, res) {
         res.status(404).send();
       }
       // Compares the provided password with the stored hashed password
-      const isPasswordMatch = await userModel
-        .findById(user._id)
-        .then((u) => u.comparePassword(authorizationData.password));
+      const userRecord = await userModel.findById(user._id);
+      const passwordsMatch = await userRecord.comparePassword(authorizationData.password);
 
-      if (!isPasswordMatch) {
+      if (!passwordsMatch) {
         res.setHeader("WWW-Authenticate", 'Basic realm="user"');
         res.status(401).send();
       } else {
