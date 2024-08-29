@@ -5,8 +5,6 @@ import { moduleModel } from "./src/Models/ModuleModel.js";
 import { questionModel } from "./src/Models/QuestionModel.js";
 import { assessmentModel } from "./src/Models/AssessmentModel.js";
 import { courseModel } from "./src/Models/CourseModel.js";
-// import { instructorDataModel } from "./src/Models/InstructorDataModel.js";
-// import { learnerDataModel } from "./src/Models/LearnerDataModel.js";
 
 // Set up the environment
 dotenv.config();
@@ -209,7 +207,8 @@ describe("Course, User and InstructorData: Insert", () => {
   const instructor = {
     name: "Test Instructor User",
     email: `instructor_${Date.now()}@test.user`,
-    password: "123456789"
+    password: "123456789",
+    learnerData: { courses: [] }
   };
 
   const module = {
@@ -296,13 +295,15 @@ describe("Course, User and LearnerData: Insert", () => {
   const instructor = {
     name: "Test Instructor User",
     email: `instructor_${Date.now()}@test.user`,
-    password: "123456789"
+    password: "123456789",
+    learnerData: { courses: [] }
   };
 
   const learner = {
     name: "Test Learner User",
     email: `learner_${Date.now()}@gmail.com`,
-    password: "123456789"
+    password: "123456789",
+    learnerData: { courses: [] }
   };
 
   const module = {

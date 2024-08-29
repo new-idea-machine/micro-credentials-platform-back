@@ -23,9 +23,9 @@ const moduleSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
-    type: { type: mongoose.Schema.Types.String, enum: MODULE_SCHEMA_TYPE_ENUM },
+    type: { type: mongoose.Schema.Types.String, enum: MODULE_SCHEMA_TYPE_ENUM, required: true },
     chapters: [{ type: Map, of: chapterSchema }],
-    url: { type: String },
+    url: { type: String, required: true },
     urlAuthentication: urlSchema,
     completed: { type: Boolean }
   },

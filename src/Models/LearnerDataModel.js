@@ -5,7 +5,7 @@ dotenv.config();
 
 const learnerDataSchema = new mongoose.Schema(
   {
-    courses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }]
+    courses: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true }]
   },
   { _id: false }
 );

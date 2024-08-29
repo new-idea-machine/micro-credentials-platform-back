@@ -5,15 +5,20 @@ import { instructorDataSchema } from "./InstructorDataModel.js";
 
 dotenv.config();
 
+const connectionString = process.env.MONGO_URL;
+
+console.log(`Connected to ${connectionString}`);
+
+await mongoose.connect(connectionString);
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    learnerData: { type: learnerDataSchema, required: false },
+    learnerData: { type: learnerDataSchema, required: true },
     instructorData: {
-      type: instructorDataSchema,
-      required: false
+      type: instructorDataSchema
     }
   },
   { timestamps: true }

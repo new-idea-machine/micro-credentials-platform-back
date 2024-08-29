@@ -8,9 +8,15 @@ dotenv.config();
 const courseSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
-    description: { type: String },
-    instructor: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    components: [{ type: mongoose.Schema.Types.Mixed, of: [moduleSchema, assessmentSchema] }],
+    description: { type: String, required: true },
+    instructor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    components: [
+      {
+        type: mongoose.Schema.Types.Mixed,
+        of: [moduleSchema, assessmentSchema],
+        required: true
+      }
+    ],
     currentComponent: { type: Number },
     credentialEarned: { type: Boolean }
   },

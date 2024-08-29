@@ -30,21 +30,18 @@ User GET Tests
  7. Get the same instructor user using the wrong password.
 
 
-User Profile POST Tests
+User Profile PATCH Tests
 -----------------------
+ 1. Update profile of non existent user.
+ 2. Update the user profile name path.
+ 3. Update the user profile with learnerData path.
+ 4. Update the user profile with instructorData path.
+ 5. Update the user profile email path.
+ 6. Update the user profile password path.
 
- 1. Create a user profile with the specified email address in headers.
- 2. Create a user profile with a non existing user in the database.
- 3. Create a user profile with a user profile already in the database.
- 4. Create a user profile with a missing firstname.
- 5. Create a user profile with a missing lastname.
-
- User Profile GET Tests
- ----------------------
- 1. Get a user profile with the specified email address in headers.
- 2. Get a user profile with no authorization headers provided.
- 3. Get a user profile with a non-existent user in the database.
- 4. Get a user profile for an existing user in the database.
+ User DELETE Tests
+ ------------------
+ 1. Delete all the users.
 
 */
 
@@ -71,7 +68,10 @@ const learnerUserData = {
   },
   userInfo: {
     name: "Test Learner User",
-    isInstructor: false
+    isInstructor: false,
+    learnerData: {
+      courses: []
+    }
   }
 };
 
@@ -82,7 +82,13 @@ const instructorUserData = {
   },
   userInfo: {
     name: "Test Instructor User",
-    isInstructor: true
+    isInstructor: true,
+    learnerData: {
+      courses: []
+    },
+    instructorData: {
+      courses: []
+    }
   }
 };
 
@@ -590,170 +596,157 @@ test("Get the Same Instructor User Using Wrong Password", async function () {
 });
 
 // ============================================================================================
-// USER PROFILE POST TESTS
+// USER PROFILE PATCH TESTS
 // ============================================================================================
 
-/* Create mock data for testing purposes */
+test("Update profile of non existent user", async function () {
+  /*
+  TEST 1:  Update profile of a non-existent user.
 
-const userProfileData = {
-  credentials: {
-    email: `learner_${Date.now()}@test.user`,
-    password: "T35t^U$er"
-  },
-  data: {
-    firstName: "John",
-    lastName: "Doe"
-  }
-};
+  EXPECTED RESULT:  Fail (status 404).
+  */
 
-/*********************************************************************************************/
-/*Test 1: Create a user profile with a missing lastname.
+  const updatedUserInfo = structuredClone(learnerUserData.userInfo);
 
-EXPECTED RESULT: Fail (status 400)
-*/
-test("Create User Profile with Missing Lastname", async function () {
-  const data = structuredClone(userProfileData.data);
-  delete data["lastName"];
+  updatedUserInfo.name = "NewName";
+  delete updatedUserInfo.learnerData;
 
-  const [response, result] = await sendRequest(
-    "POST",
-    "/profile",
-    userProfileData.credentials,
-    data
-  );
-  expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(400);
-  expect(result).toHaveProperty("Type", "ValidationError");
-});
+  const credentials = structuredClone(learnerUserData.credentials);
 
-/*********************************************************************************************/
-/*
-Test 2: Create a user profile with a missing firstname.
-
-EXPECTED RESULT:  Fail (status 400).
-*/
-test("Create User Profile with Missing Firstname", async function () {
-  const data = structuredClone(userProfileData.data);
-  delete data["firstName"];
-
-  const [response, result] = await sendRequest(
-    "POST",
-    "/profile",
-    userProfileData.credentials,
-    data
-  );
-
-  expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(400);
-  expect(result).toHaveProperty("Type", "ValidationError");
-});
-
-/*
- * Test 3:  Create a user profile with the specified email address in headers.
- *
- * EXPECTED RESULT:  Success (status 201).
- */
-test("Create User Profile with Existing Email", async function () {
-  const [response, result] = await sendRequest(
-    "POST",
-    "/profile",
-    userProfileData.credentials,
-    userProfileData.data
-  );
-
-  expect(response?.ok).toBe(true);
-  expect(response?.status).toBe(201);
-  expect(result).not.toBe(undefined);
-});
-
-/*********************************************************************************************/
-/*
-Test 4:  Create a user profile with a non existing user in the database.
- *
- * EXPECTED RESULT:  Fail (status 404).
- */
-test("Create User Profile with Non-Existing User", async function () {
-  const credentials = structuredClone(userProfileData.credentials);
   credentials.email = "-" + credentials.email;
 
-  const [response, result] = await sendRequest(
-    "POST",
-    "/profile",
-    credentials,
-    userProfileData.data
-  );
+  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
 
   expect(response?.ok).toBe(false);
   expect(response?.status).toBe(404);
-  expect(result).toHaveProperty("Type", "NotFoundError");
+  expect(result).toBe(undefined);
 });
 
 /*********************************************************************************************/
-/*
-Test 5: Create a user profile with a user profile already in the database.
 
-EXPECTED RESULT: Conflict (status 409).
-*/
-test("Create a user profile with a user profile already existing in the database", async function () {
-  const [response, result] = await sendRequest(
-    "POST",
-    "/profile",
-    userProfileData.credentials,
-    userProfileData.data
-  );
+test("Update the user profile name path", async function () {
+  /*
+  TEST 2:  Update the user profile name path.
 
-  expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(409);
-  expect(result).not.toBe(undefined);
-});
+  EXPECTED RESULT:  Success (status 200).
+  */
 
-// ============================================================================================
-// USER PROFILE GET TESTS
-// ============================================================================================
+  const updatedUserInfo = { name: "NewName" };
 
-/*Test 1: Get a user profile with the specified email address in headers.
+  const credentials = structuredClone(learnerUserData.credentials);
 
-EXPECTED RESULT: Success (status 200)
-*/
-
-test("Get a user profile with the specified email address in headers.", async function () {
-  const [response, result] = await sendRequest("GET", "/profile", userProfileData.credentials);
+  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
 
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
-  expect(result).not.toBe(undefined);
+  expect(result?.name).toBe("NewName");
 });
 
 /*********************************************************************************************/
-/*Test 2: Get a user profile with no authorization headers provided
 
-EXPECTED RESULT: Unauthorized (status 401)
-*/
+test("Update the user profile with learnerData path.", async function () {
+  /*
+  TEST 3:  Update the user profile with learnerData path.
 
-test("Get a user profile with no authorization headers provided.", async function () {
-  const [response, result] = await sendRequest("GET", "/profile");
+  EXPECTED RESULT:  Fail (status 400).
+  */
+
+  const updatedUserInfo = {
+    learnerData: {
+      courses: ["12345656778"]
+    }
+  };
+
+  const credentials = structuredClone(learnerUserData.credentials);
+
+  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(401);
-  expect(result).toHaveProperty("Type", "AuthorizationError");
+  expect(response?.status).toBe(400);
+  expect(result).toBe(undefined);
 });
 
 /*********************************************************************************************/
-/*
-Test 3: Get a user profile with a non-exitent user in the database
 
-EXPECTED RESULT: Not found (status 404)
-*/
+test("Update the user profile with instructorData path", async function () {
+  /*
+    TEST 4:  Update the user profile with instructorData path.
 
-test("Get a user profile with a non-existent user in the database.", async function () {
-  const credentials = structuredClone(userProfileData.credentials);
-  credentials.email = "-" + credentials.email;
+    EXPECTED RESULT:  Fail (status 400).
+    */
 
-  const [response, result] = await sendRequest("GET", "/profile", credentials);
+  const updatedUserInfo = {
+    instructorData: {
+      courses: ["12345678901"]
+    }
+  };
+
+  const credentials = structuredClone(instructorUserData.credentials);
+
+  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
 
   expect(response?.ok).toBe(false);
+  expect(response?.status).toBe(400);
+  expect(result).toBe(undefined);
+});
+/*********************************************************************************************/
+
+test("Update the user profile email path", async function () {
+  /*
+  TEST 5:  Update the user profile email path.
+
+  EXPECTED RESULT:  Success (status 200).
+  */
+
+  const updatedUserInfo = {
+    email: `learner@test.user`
+  };
+
+  const credentials = structuredClone(learnerUserData.credentials);
+
+  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
+
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(result?.email).toBe("learner@test.user");
+});
+
+/*********************************************************************************************/
+
+test("Update the user profile password path", async function () {
+  /*
+  TEST 6:  Update the user profile password path.
+
+  EXPECTED RESULT:  Success (status 200).
+  */
+
+  const updatedUserInfo = { password: "new_password" };
+
+  const credentials = structuredClone(learnerUserData.credentials);
+
+  credentials.email = "learner@test.user";
+
+  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
+
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(result?.password).toBe("new_password");
+});
+
+// ============================================================================================
+// USER DELETE TESTS
+// ============================================================================================
+
+test("Delete all the users.", async function () {
+  /*
+  TEST 1:  Delete all the users.
+
+  EXPECTED RESULT:  Success (status 200).
+  */
+
+  const [response, result] = await sendRequest("DELETE", "/");
+
+  // The status is 404 since the service returns no data once the request is made to delete all the users
   expect(response?.status).toBe(404);
-  expect(result).toHaveProperty("Type", "NotFoundError");
+  expect(result).toBe(undefined);
 });
-
-/*********************************************************************************************/

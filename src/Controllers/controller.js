@@ -95,7 +95,7 @@ async function create(req, res) {
       name: user.name,
       email: authorizationData.userId,
       password: authorizationData.password,
-      learnerData: user.isInstructor ? null : user.leanerData ? user.leanerData : null,
+      learnerData: user.learnerData,
       instructorData: user.isInstructor
         ? user.instructorData
           ? user.instructorData
@@ -130,10 +130,42 @@ async function create(req, res) {
 }
 
 async function update(req, res) {
+  /*
+  Method to update the user profile document with request body data.
+
+  Accepts: application/json request body
+  Returns: Status Code, Updated User Document
+  Headers: should contain authorization header
+          Authorization: Basic <base64 encoded username:password>
+          Authorization: Bearer <access token>
+  */
   try {
-    const name = req.params.id;
-    const newPassword = req.body.password;
-    res.status(201).json(await service.updatePassword(name, newPassword));
+    const authorizationData = service.getAuthorizationData(req);
+    const updateUserRequest = req.body;
+    const nonUpdatablePaths = ["learnerData", "instructorData"];
+
+    // If the authorization data does not contain user ID respond with Unauthorized Access Error
+    if (!authorizationData?.userId) {
+      res.setHeader("WWW-Authenticate", 'Basic realm="user"');
+      res.status(401).send();
+    }
+
+    // Remove the keys from request body for non updatable paths
+    nonUpdatablePaths.forEach((key) => {
+      if (updateUserRequest.hasOwnProperty(key)) res.status(400).send();
+    });
+
+    // Find the user in the database by the user ID and update if the user exists
+    const savedUser = await userModel.findOneAndUpdate(
+      { email: authorizationData.userId },
+      { ...updateUserRequest },
+      { new: true }
+    );
+
+    // If user does not exist in database respond with Not Found Error
+    if (!savedUser) res.status(404).send();
+    // If user exists, respond with updated user data
+    res.status(200).send(savedUser);
   } catch (error) {
     res.status(504).send();
   }

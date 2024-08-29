@@ -6,7 +6,7 @@ dotenv.config();
 const assessmentSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
-    questions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Question" }],
+    questions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Question", required: true }],
     currentQuestion: { type: Number }
   },
   { timestamps: true }
