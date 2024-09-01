@@ -1,4 +1,4 @@
-import { userModel } from "./model.js";
+import { userModel, fileModel } from "./model.js";
 import validator from "validator";
 import * as service from "./service.js";
 
@@ -151,4 +151,35 @@ async function removeOne(req, res) {
     });
 }
 
-export { getAll, get, create, removeOne, update, getAuth };
+//For demoing purpose only and does not represent the final product
+async function getAllFiles(req, res) {
+  service.getAllFiles(req, res);
+}
+
+//For demoing purpose only and does not represent the final product
+async function createFile(req, res) {
+  service.createFile(req, res);
+}
+
+//For demoing purpose only and does not represent the final product
+async function updateFile(req, res) {
+  service.updateFile(req, res);
+}
+
+//For demoing purpose only and does not represent the final product
+async function deleteFile(req, res) {
+  service.deleteFile(req, res);
+}
+
+export {
+  getAll,
+  get,
+  create,
+  removeOne,
+  update,
+  getAuth,
+  getAllFiles,
+  createFile,
+  updateFile,
+  deleteFile
+};

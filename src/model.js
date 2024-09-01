@@ -20,8 +20,18 @@ const userSchema = new mongoose.Schema({
   instructorData: { type: instructorSchema }
 });
 
+//For demoing purpose only and does not represent the final product
+//File Schema
+const fileSchema = new mongoose.Schema({
+  filename: { type: String, required: true },
+  url: { type: String, required: true }
+});
+
 const userModel = database.model("users", userSchema);
 const learnerModel = database.model("learner", learnerSchema);
 const instructorModel = database.model("instructor", instructorSchema);
 
-export { userModel, learnerModel, instructorModel };
+//For demoing purpose only and does not represent the final product
+const fileModel = database.model("files", fileSchema);
+
+export { userModel, learnerModel, instructorModel, fileModel };
