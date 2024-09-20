@@ -1,5 +1,5 @@
 import express from "express";
-import { getAll, get, create, removeOne, update, getAuth } from "./controller.js";
+import { getAll, get, create, removeOne, update, getAuth } from "../Controllers/controller.js";
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.get("/auth", getAuth);
 
 router.post("/auth", create);
 
-router.patch("/user/:id", update);
+router.patch("/user", update);
 
 //Currently empties database, will change to only delete one user when done
 router.delete("/", removeOne);

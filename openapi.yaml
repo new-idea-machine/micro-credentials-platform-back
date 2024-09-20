@@ -194,6 +194,182 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
+  /courses:
+    summary: Perform Create and Read operations on courses.
+    description: This resource comprises of READ and Write operations that can be performed on the courses object.
+    get:
+      summary: Get all the courses.
+      description: Returns a list of course.
+      parameters:
+        - in: query
+          name: page
+          description: Page number of results to retrieve.
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          description: Number of results to retrieve per page.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      tags:
+        - Courses
+      responses:
+        "200":
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No Courses not found.
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+    post:
+      summary: Create a new course.
+      description: Create a new course resource.
+      tags:
+        - Courses
+      requestBody:
+        description: Course details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "201":
+          description: Course successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "406":
+          description: Invalid data.
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+  /courses/{id}:
+    get:
+      summary: Retrieve a specific course.
+      description: Fetch the course resource by specifying its ID.
+      tags:
+        - Courses
+      responses:
+        "200":
+          description: Course successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "404":
+          description: Course not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+    put:
+      summary: Update a specific course.
+      description: Update the course resource by specifying its ID.
+      tags:
+        - Courses
+      requestBody:
+        description: Updated course details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "200":
+          description: Course successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "401":
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+        "404":
+          description: Course not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+        "406":
+          description: Invalid data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+    delete:
+      summary: Delete a specific course.
+      description: Delete the course resource by specifying its ID.
+      tags:
+        - Courses
+      responses:
+        "204":
+          description: Course successfully deleted.
+        "401":
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+        "404":
+          description: Course not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
 
 components:
   securitySchemes:
