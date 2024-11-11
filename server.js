@@ -205,3 +205,20 @@ app.use((req, res) => {
 // }
 
 //main().catch(console.error);
+
+// In server.js
+import courseModel from './courseschema.js'; // make sure to import your course model
+
+// Route to fetch all courses or by specific instructor
+app.get('/courses', async (req, res) => {
+  try {
+    const instructorId = req.query.instructorId; // optional query parameter to filter by instructor
+    const query = instructorId ? { instructorId } : {}; // Filter by instructor if ID provided
+    const courses = await courseModel.find(query);
+    res.status(200).json(courses);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: 'Error fetching courses' });
+  }
+});
+
