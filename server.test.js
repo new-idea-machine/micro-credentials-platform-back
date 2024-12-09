@@ -84,8 +84,10 @@ async function sendRequest(method, path, credentials, data = null) {
       parameters = "?" + data;
     }
   }
+
   let response = undefined; // the response from the server (if any)
   let result = undefined; // the JSON object in the response's body (if any)
+
   /*
   "try-catch" blocks are used to handle the cases where there's no response from the server or
   the server's body doesn't contain a JSON object string ("await" will throw exceptions in
@@ -280,12 +282,6 @@ test("Register New Learner User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(learnerUserData.userInfo.name);
-  expect(result.user_data.email).toBe(learnerUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(result.user_data.instructorData).toBe(null);
   validateCredentialObject(learnerUserData, result);
 });
 
@@ -320,12 +316,6 @@ test("Register New Instructor User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(instructorUserData.userInfo.name);
-  expect(result.user_data.email).toBe(instructorUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(typeof result.user_data.instructorData).toBe("object");
   validateCredentialObject(instructorUserData, result);
 });
 
@@ -397,12 +387,6 @@ test("Get an Existing Learner User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(learnerUserData.userInfo.name);
-  expect(result.user_data.email).toBe(learnerUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(result.user_data.instructorData).toBe(null);
   validateCredentialObject(learnerUserData, result);
 });
 
@@ -430,12 +414,6 @@ test("Get an Existing Instructor User", async function () {
   expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(result).not.toBe(undefined);
-  expect(typeof result.access_token).toBe("string");
-  expect(result.token_type).toBe("Bearer");
-  expect(result.user_data.name).toBe(instructorUserData.userInfo.name);
-  expect(result.user_data.email).toBe(instructorUserData.credentials.email);
-  expect(typeof result.user_data.learnerData).toBe("object");
-  expect(typeof result.user_data.instructorData).toBe("object");
   validateCredentialObject(instructorUserData, result);
 });
 

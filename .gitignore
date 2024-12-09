@@ -1,4 +1,19 @@
+docs
 node_modules
 package-lock.json
-.env
 server.test.js
+
+# Editor directories and files
+.vscode/*
+.eslintrc.cjs
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment files
+.env

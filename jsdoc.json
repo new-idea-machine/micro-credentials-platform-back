@@ -1,0 +1,13 @@
+{
+  "plugins": ["plugins/markdown"],
+  "opts": {
+    "template": "node_modules/docdash",
+    "destination": "./docs",
+    "recurse": true
+  },
+  "docdash": {
+    "search": true,
+    "sort": true,
+    "private": false
+  }
+}
