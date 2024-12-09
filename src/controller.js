@@ -178,7 +178,6 @@ async function resetPasswordReceiver(req, res) {
   try {
     const token = jwt.verify(req.params.i, process.env.SECRET_KEY);
     const email = token.name;
-    console.log(token);
     if (token) {
       res.send(
         '<form method="post" action="/auth/resetPassword"><input type="password" name="password" required><script>user</script><input type="submit" value="Reset Password"></form>'

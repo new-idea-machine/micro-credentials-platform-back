@@ -9,7 +9,6 @@ import {
   resetPasswordReceiver,
   resetPassword
 } from "./controller.js";
-import jwt from "jsonwebtoken";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -28,20 +27,10 @@ router.delete("/", removeOne);
 
 router.get("/auth/recovery", sendRecoveryEmail);
 
-router.get("/auth/recovery/:i", authenticateToken, resetPasswordReceiver);
+router.get("/auth/recovery/:i", resetPasswordReceiver);
 
 // needs to be changed to patch when front end done, the form I'm sending for now only accepts
 // get and post
 router.post("/auth/resetPassword", resetPassword);
-
-function authenticateToken(req, res, next) {
-  const token = req.params.i;
-  if (token === null) return res.sendStatus(403);
-  jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-}
 
 export default router;
