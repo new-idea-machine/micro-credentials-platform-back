@@ -1,8 +1,18 @@
 import express from "express";
-import { getAll, get, create, removeOne, update, getAuth, resetPasswordReceiver } from "./controller.js";
+import {
+  getAll,
+  get,
+  create,
+  removeOne,
+  sendRecoveryEmail,
+  getAuth,
+  resetPasswordReceiver,
+  resetPassword
+} from "./controller.js";
+import jwt from "jsonwebtoken";
 
-
-
+import dotenv from "dotenv";
+dotenv.config();
 const router = express.Router();
 
 router.get("/", getAll);
@@ -13,26 +23,25 @@ router.get("/auth", getAuth);
 
 router.post("/auth", create);
 
-router.patch("/user/:id", update);
-
 //Currently empties database, will change to only delete one user when done
 router.delete("/", removeOne);
 
-router.get('/reset-password/:token', resetPasswordReceiver);
+router.get("/auth/recovery", sendRecoveryEmail);
 
-// Route to update the password
-router.post('/reset-password', (req, res) => {
-  const { token, password } = req.body;
-  // Find the user with the given token and update their password
-  console.log(req.body)
-  // const user = users.find(user => user.resetToken === token);
-  // if (user) {
-  //   user.password = password;
-  //   delete user.resetToken; // Remove the reset token after the password is updated
-  res.status(200).send('Password updated successfully');
-  // } else {
-  //   res.status(404).send('Invalid or expired token');
-  //}
-})
+router.get("/auth/recovery/:i", authenticateToken, resetPasswordReceiver);
+
+// needs to be changed to patch when front end done, the form I'm sending for now only accepts
+// get and post
+router.post("/auth/resetPassword", resetPassword);
+
+function authenticateToken(req, res, next) {
+  const token = req.params.i;
+  if (token === null) return res.sendStatus(403);
+  jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+}
 
 export default router;

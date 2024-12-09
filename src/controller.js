@@ -2,7 +2,7 @@ import { userModel } from "./model.js";
 import validator from "validator";
 import * as service from "./service.js";
 import { reverseMultiplyAndSum } from "validator/lib/util/algorithms.js";
-
+import jwt from "jsonwebtoken";
 async function getAll(req, res) {
   try {
     service.getAll();
@@ -120,15 +120,6 @@ async function create(req, res) {
   }
 }
 
-async function update(req, res) {
-  try {
-    const email = req.params.id
-    service.passwordRecovery(email);
-  } catch (error) {
-    res.status(503).json({ msg: "Cant reach server" });
-  }
-}
-
 //Currently empties database, will change to only delete one user when done
 async function removeOne(req, res) {
   service
@@ -146,18 +137,67 @@ async function removeOne(req, res) {
     });
 }
 
-async function resetPasswordReceiver (req,res){
-  const  token  = req.params.token;
-  console.log(token)
-  const user = await userModel.findOne({resetToken:token})
-  // Check if the token exists and is still valid
-  if (true ===true)//(users.some(user => user.resetToken === token)) {
-    // Render a form for the user to enter a new password
-    {console.log(user)
-    res.send('<form method="post" action="/reset-password"><input type="password" name="password" required><input type="submit" value="Reset Password"></form>');
-  } else {
-    res.status(404).send('Invalid or expired token');
+/**
+ * @description sends email for password recovery, email source will be changed upon front end
+ * completion
+ * @param {*} req will be altered to recieve email address when front end component complete
+ * @param {*} res either ok or cant reach server
+ */
+async function sendRecoveryEmail(req, res) {
+  try {
+    const email = process.env.EMAIL;
+    await service.passwordRecovery(email).then(res.sendStatus(200));
+  } catch (error) {
+    res.status(503).json({ msg: "Cant reach server" });
   }
 }
 
-export { getAll, get, create, removeOne, update, getAuth, resetPasswordReceiver };
+/**
+ * @description recieves request for password reset from email, res.send being too long
+ * is intentional, it wasnt working split up. will be changed to a link to the corresponding
+ * front end page when that is ready
+ * @param {*} req used for getting token for verification
+ * @param {*} res sends relevent error message or form for password reset if successful
+ */
+async function resetPasswordReceiver(req, res) {
+  try {
+    const token = jwt.verify(req.params.i, process.env.SECRET_KEY);
+    const email = token.name;
+    console.log(token);
+    if (token) {
+      res.send(
+        '<form method="post" action="/auth/resetPassword"><input type="password" name="password" required><script>user</script><input type="submit" value="Reset Password"></form>'
+      );
+    } else {
+      res.status(404).send("Invalid or expired token");
+    }
+  } catch (error) {
+    res.status(503).json({ msg: "Cant reach server" });
+  }
+}
+
+/**
+ * @description resets password from form
+ * @param {*} req recieves relevent html information
+ * @param {*} res sends relevent error message or new password to back end if successful
+ */
+async function resetPassword(req, res) {
+  try {
+    const newPassword = req.body.password;
+    const email = jwt.verify(req.headers.referer.split("/")[5], process.env.SECRET_KEY).name;
+    service.updatePassword(email, newPassword);
+  } catch (error) {
+    res.status(503).json({ msg: "Cant reach server" });
+  }
+}
+
+export {
+  getAll,
+  get,
+  create,
+  removeOne,
+  sendRecoveryEmail,
+  getAuth,
+  resetPasswordReceiver,
+  resetPassword
+};

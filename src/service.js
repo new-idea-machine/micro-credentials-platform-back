@@ -3,8 +3,12 @@ import { userModel, learnerModel, instructorModel } from "./model.js";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js";
 import { ClientSecretCredential } from "@azure/identity";
-import crypto from 'crypto'
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 dotenv.config();
+
+const resetHolder = [{ email: "no", token: "fake" }];
+
 async function getAll() {
   const users = await userModel.find();
   console.log(users);
@@ -27,8 +31,8 @@ async function create(user) {
   return { userUID: newDocument._id };
 }
 
-async function updatePassword(name, newPassword) {
-  await userModel.updateOne({ username: name }, { password: newPassword });
+async function updatePassword(email, newPassword) {
+  await userModel.updateOne({ email: email }, { password: newPassword });
 }
 
 //Currently empties database, will change to only delete one user when done
@@ -76,40 +80,32 @@ function getAuthorizationData(request) {
     return { token: Buffer.from(authorization.parameters, "base64") };
   } else return null;
 }
-
-async function passwordRecovery(account) {
+//update open api spec?
+async function sendEmail(email, content) {
   const credential = new ClientSecretCredential(
     process.env.TENANT_ID, // Directory (tenant) ID
     process.env.APPLICATION_ID, // Application (client) ID
     process.env.APPLICATION_SECRET // Application Secret
   );
-
   const authProvider = new TokenCredentialAuthenticationProvider(credential, {
     scopes: ["https://graph.microsoft.com/.default"]
   });
   const client = Client.initWithMiddleware({ debugLogging: true, authProvider });
-    // Generate a reset token
-    const token = crypto.randomBytes(20).toString('hex');
-    // Store the token with the user's email in a database or in-memory store
-    await userModel.updateOne({ email:account }, { resetToken:token });
-    // Send the reset token to the user's email
   const sendMail = {
     message: {
-      subject: 'Password Reset',
+      subject: "Password Reset",
       body: {
         contentType: "Text",
-        content: `Click the following link to reset your password: http://localhost:5001/reset-password/${token}`,
-    
+        content: content
       },
       toRecipients: [
         {
-          emailAddress: { address: process.env.EMAIL } // Recipient's e-mail address
+          emailAddress: { address: email } // Recipient's e-mail address
         }
       ]
     },
     saveToSentItems: "false"
   };
-
   client
     .api("/users/donotreply@untappedenergy.ca/sendMail") // Shared mailbox e-mail address
     .header("Content-type", "application/json")
@@ -120,9 +116,13 @@ async function passwordRecovery(account) {
     });
 }
 
-
-
-
+async function passwordRecovery(account) {
+  const access_token = jwt.sign({ name: account }, process.env.SECRET_KEY, { expiresIn: "1h" });
+  sendEmail(
+    account,
+    `Click the following link to reset your password: http://localhost:5001/auth/recovery/${access_token}"`
+  );
+}
 
 export {
   getAll,
@@ -131,5 +131,6 @@ export {
   updatePassword,
   removeOne,
   getAuthorizationData,
-  passwordRecovery
+  passwordRecovery,
+  resetHolder
 };
