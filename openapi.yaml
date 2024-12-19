@@ -3,7 +3,7 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.7.0"
+  version: "0.8.0"
 
 servers:
   - url: http://localhost/api:5001
@@ -74,54 +74,32 @@ paths:
     get:
       summary: Send an e-mail with a token for changing a user's password
       description: >-
-        Send an e-mail with a single-use time-limited token that can be used to reset the
-        password associated with that e-mail address.  The e-mail address is encoded with
-        Base64 and passed as an HTTP Bearer authentication token.  For security reasons, no
-        error responses are given (except for database connectivity issues).
+        Send an e-mail with a single-use time-limited token that can be used to reset the password
+        associated with that e-mail address.  The e-mail address is encoded with Base64 and passed
+        as an HTTP Bearer authentication token.  For security reasons, no error responses are given
+        (except for database connectivity issues).
       security:
         - AuthHTTPBearer: []
       responses:
         "202":
           description: >-
-            A message has been sent to the e-mail address provided.  This message will include
-            a single-use time-limited token that will allow the user to set a new password for
-            their account.  The body of the response contains another single-use time-limited
-            token that's to be passed as the "userId" part of an HTTP Basic authentication
-            header (see this path's PATCH method).
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  userIdToken:
-                    type: string
-                required:
-                  - userIdToken
+            A message has been sent to the e-mail address provided.  If there is a registered user
+            with this e-mail address then the message will include a single-use time-limited token
+            plus further instructions on how to use that token to create a new password; otherwise,
+            the message will inform the recipient that there's no registered user with this e-mail
+            address.
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     patch:
       summary: Change a user's password and log in.
       description: >-
-        Change a user's password.  Set the "userId" part of HTTP Basic authentication to the
-        token that was previously returned by this path's GET method, and set the "password"
-        part to the token that was e-mailed to the user.  If successful then the user's
-        password is changed and the user is logged in (the token in the response body is the
-        bearer token that represents the user).
+        Change a user's password.  The "userId" part of HTTP Basic authentication is the access
+        token that was sent to the user via this path's GET method, and the "password" part is the
+        new password.  If successful then the user's password is changed and the user is logged in
+        (the token in the response body is the bearer token that represents the user).
       security:
         - AuthHTTPBasic: []
-      requestBody:
-        description: The new password.
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                password:
-                  type: string
-              required:
-                - password
       responses:
         "200":
           description: The password has been changed and the user is now logged in.
