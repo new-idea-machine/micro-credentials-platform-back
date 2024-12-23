@@ -56,7 +56,7 @@ async function getAuth(req, res) {
       }
       // Compares the provided password with the stored hashed password
       const userRecord = await userModel.findById(user._id);
-      const passwordsMatch = await userRecord.comparePassword(authorizationData.password);
+      const passwordsMatch = await userRecord.passwordMatches(authorizationData.password);
 
       if (!passwordsMatch) {
         res.setHeader("WWW-Authenticate", 'Basic realm="user"');

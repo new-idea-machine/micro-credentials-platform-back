@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 
+const BCRYPT_NUM_SALT_ROUNDS = 10;
+
 dotenv.config();
 
 const connectionString = process.env.MONGO_URL;
@@ -12,9 +14,6 @@ const database = await mongoose.connect(connectionString);
 
 const learnerSchema = new mongoose.Schema({});
 const instructorSchema = new mongoose.Schema({});
-
-const SALT_ROUNDS = 10;
-
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -25,24 +24,37 @@ const userSchema = new mongoose.Schema({
 
 // Detects change to the password field, both password update and password creation, then hashes the password before persistance
 userSchema.pre("save", async function (next) {
-  if (this.isModified("password")) {
-    try {
-      const salt = await bcrypt.genSalt(SALT_ROUNDS);
-      this.password = await bcrypt.hash(this.password, salt);
-    } catch (err) {
-      next(err); // Pass any errors to the next middleware
+    console.assert(typeof next === "function");
+    if (this.isModified("password")) {
+      try {
+        const salt = await bcrypt.genSalt(BCRYPT_NUM_SALT_ROUNDS);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+      } catch (error) {
+        next(error);
+      }
+    } else {
+      next();
     }
-  } else {
-    next();
-  }
-});
+  });
 
 // Method to compare input password with hashed password in DB
-userSchema.methods.comparePassword = async function (loginPassword) {
+userSchema.methods.passwordMatches = async function (password) {
+  if (typeof password !== "string")
+    throw new TypeError("\"password\" must be a string");
   try {
-    return await bcrypt.compare(loginPassword, this.password);
-  } catch (err) {
-    throw new Error("Error comparing passwords");
+    return await bcrypt.compare(password, this.password);
+  } catch (error) {
+    /*
+    If an error is caught here then either the "bcrypt" API has changed or there's a fault with the
+    "bcrypt" package.
+
+    For security reasons, it must be assumed that the user-supplied password doesn't match the
+    encrypted password.
+    */
+
+    console.error(error.name, error.cause);
+    return false;
   }
 };
 
