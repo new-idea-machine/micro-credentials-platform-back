@@ -34,7 +34,6 @@ const instructorSchema = new mongoose.Schema({});
  * @property {string} password - The user's password (will be encrypted when document is saved).
  * @property {object} learnerData - The learner data associated with the user.
  * @property {object} [instructorData] - The instructor data associated with the user (optional).
- * @mixes userSchema.methods
  */
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -44,13 +43,11 @@ const userSchema = new mongoose.Schema({
   instructorData: { type: instructorSchema }
 });
 
-/** @mixin */
-userSchema.methods;
-
 /**
  * Compares a user-supplied password with the document's encrypted password to see if it matches.
  *
  * @method
+ * @memberof! userSchema
  * @param {!string} password - The user-supplied password
  * @returns {boolean} `true` if the password matches, `false` if it doesn't
  * @throws {TypeError} `TypeError` if `password` is not a string
