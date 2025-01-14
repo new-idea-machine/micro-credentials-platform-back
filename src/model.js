@@ -17,10 +17,9 @@ const BCRYPT_NUM_SALT_ROUNDS = 10;
 dotenv.config();
 
 const connectionString = process.env.MONGO_URL;
+const database = await mongoose.connect(connectionString);
 
 console.log(`Connected to ${connectionString}`);
-
-const database = await mongoose.connect(connectionString);
 
 const learnerSchema = new mongoose.Schema({});
 const instructorSchema = new mongoose.Schema({});
