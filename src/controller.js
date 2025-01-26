@@ -1,6 +1,9 @@
 import { userModel } from "./model.js";
 import validator from "validator";
 import * as service from "./service.js";
+import multer from "multer";
+
+const upload = multer({ dest: "uploads/" });
 
 async function getAll(req, res) {
   try {
@@ -156,4 +159,84 @@ async function removeOne(req, res) {
     });
 }
 
-export { getAll, get, create, removeOne, update, getAuth };
+//For demoing purpose only and does not represent the final product
+async function getAllFiles(req, res) {
+  try {
+    const files = await service.getAllFiles();
+    res.status(200).json(files);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+}
+
+//For demoing purpose only and does not represent the final product
+async function createFile(req, res) {
+  await upload.array("files", 10)(req, res, async function (err) {
+    if (err) {
+      return res.status(400).send({ message: `File upload failed. ${err}` });
+    }
+
+    try {
+      //Call processFiles to handle the uploaded files
+
+      const savedFiles = await service.createFile(req.files);
+
+      //Respond with the saved file metadata
+      res.status(200).json(savedFiles);
+    } catch (err) {
+      res.status(500).send({ message: err.message });
+    }
+  });
+}
+
+//For demoing purpose only and does not represent the final product
+// async function updateFile(req, res) {
+//   service.updateFile(req, res);
+// }
+
+//For demoing purpose only and does not represent the final product
+async function deleteFile(req, res) {
+  try {
+    const { fileID } = req.params;
+    await service.deleteFile(fileID);
+    res.status(200).json({ message: `File deleted successfully.` });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+}
+
+//For demoing purpose only and does not represent the final product
+//Access files uploaded to Google Drive
+async function accessGooleDriveFiles(req, res) {
+  try {
+    const fileId = req.params.id;
+
+    // Call the getFile function from service.js
+    const { fileStream, mimeType, fileName } = await service.accessGooleDriveFiles(fileId);
+
+    // Set the response headers
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+
+    // Pipe the file content to the response
+    fileStream.data.pipe(res);
+  } catch (error) {
+    console.error("Error from controller:", error);
+    console.error("Error details:", error.response?.data || error.stack);
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export {
+  getAll,
+  get,
+  create,
+  removeOne,
+  update,
+  getAuth,
+  getAllFiles,
+  createFile,
+  // updateFile,
+  deleteFile,
+  accessGooleDriveFiles
+};

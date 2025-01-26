@@ -2,6 +2,7 @@ docs
 node_modules
 package-lock.json
 server.test.js
+googledrive-api-key.json
 
 # Editor directories and files
 .vscode/*
