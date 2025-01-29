@@ -207,7 +207,7 @@ app.use((req, res) => {
 //main().catch(console.error);
 
 // In server.js
-import courseModel from './courseschema.js'; // make sure to import your course model
+import courseModel from './courseSchema.js'; // make sure to import your course model
 
 // Route to fetch all courses or by specific instructor
 app.get('/courses', async (req, res) => {
