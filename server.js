@@ -6,6 +6,8 @@ import cors from "cors";
 import validator from "validator";
 import nodemailer from "nodemailer";
 
+
+
 function getAuthorizationData(request) {
   /*
   Extract authorization data from an Express.js "Request" object and return an object
@@ -222,3 +224,21 @@ app.get('/courses', async (req, res) => {
   }
 });
 
+import { getUserUid } from "./tokenManager.js"; 
+
+app.get("/validate-token", (req, res) => {
+  const authHeader = req.headers["authorization"];
+
+  if (!authHeader) {
+    return res.status(401).json({ msg: "No token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  const userUid = getUserUid(token);
+
+  if (userUid) {
+    res.status(200).json({ msg: "Valid token", userUid });
+  } else {
+    res.status(401).json({ msg: "Invalid or expired token" });
+  }
+});
