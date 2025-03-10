@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import validator from "validator";
 import nodemailer from "nodemailer";
+import { authenticationMiddleware } from "./tokenManager.js";  // Import the middleware
 
 function getAuthorizationData(request) {
   /*
@@ -58,6 +59,7 @@ const userModel = database.model("users", userSchema);
 const urlencodedParser = bodyParser.urlencoded({ extended: false });
 app.use(bodyParser.json(), urlencodedParser);
 app.use(cors());
+app.use(authenticationMiddleware);
 
 app.listen(process.env.PORT, () => {
   console.log(`App is Listening on PORT ${process.env.PORT}`);
