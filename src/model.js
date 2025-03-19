@@ -111,8 +111,6 @@ const fileSchema = new mongoose.Schema(
 );
 
 const userModel = database.model("users", userSchema);
-const learnerModel = database.model("learner", learnerSchema);
-const instructorModel = database.model("instructor", instructorSchema);
 
 //For demoing purpose only and does not represent the final product
 const fileModel = database.model("files", fileSchema);
