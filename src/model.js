@@ -95,16 +95,21 @@ userSchema.pre(
   }
 );
 
-//For demoing purpose only and does not represent the final product
-//File Schema
+/**
+ * File schema for the database.
+ *
+ * @kind class
+ * @property {string} filename - The name of the file
+ * @property {string} driveId - The unique identifier for the file on Google Drive.
+ * @property {string} mimeType - The file’s type, important for determining how the file should be
+ *                               handled or rendered.
+ * @property {string} webViewLink - A URL to access or view the file directly on Google Drive.
+ */
 const fileSchema = new mongoose.Schema(
   {
     filename: { type: String, required: true },
-    //The unique identifier for the file on Google Drive
     driveId: { type: String, required: true },
-    //The file’s type, important for determining how the file should be handled or rendered
     mimeType: { type: String, required: true },
-    //A URL to access or view the file directly on Google Drive
     webViewLink: { type: String, required: true }
   },
   { timestamps: true }

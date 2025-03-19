@@ -82,7 +82,7 @@ function getAuthorizationData(request) {
 //Helper function to handle Google Drive authentication
 async function getGoogleAuth() {
   const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(process.cwd(), "googledrive-api-key.json"),
+    keyFile: path.join(process.cwd(), "googleDriveOAuth.json"),
     scopes: ["https://www.googleapis.com/auth/drive.file"]
   });
 
@@ -181,7 +181,7 @@ async function getAllFiles(req, res) {
 
 //For demoing purpose only and does not represent the final product
 //Access files uploaded to Google Drive
-async function accessGooleDriveFiles(fileId) {
+async function accessGoogleDriveFiles(fileId) {
   try {
     const auth = await getGoogleAuth();
     const drive = google.drive({ version: "v3", auth });
@@ -240,5 +240,5 @@ export {
   getGoogleAuth,
   uploadFileToGoogleDrive,
   createFile,
-  accessGooleDriveFiles
+  accessGoogleDriveFiles
 };

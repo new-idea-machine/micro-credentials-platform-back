@@ -220,7 +220,7 @@ async function getAllFiles(req, res) {
 
 //For demoing purpose only and does not represent the final product
 async function createFile(req, res) {
-  await upload.array("files", 10)(req, res, async function (err) {
+  await upload.array("files")(req, res, async function (err) {
     if (err) {
       return res.status(400).send({ message: `File upload failed. ${err}` });
     }
@@ -256,12 +256,12 @@ async function deleteFile(req, res) {
 
 //For demoing purpose only and does not represent the final product
 //Access files uploaded to Google Drive
-async function accessGooleDriveFiles(req, res) {
+async function accessGoogleDriveFiles(req, res) {
   try {
     const fileId = req.params.id;
 
     // Call the getFile function from service.js
-    const { fileStream, mimeType, fileName } = await service.accessGooleDriveFiles(fileId);
+    const { fileStream, mimeType, fileName } = await service.accessGoogleDriveFiles(fileId);
 
     // Set the response headers
     res.setHeader("Content-Type", mimeType);
@@ -287,5 +287,5 @@ export {
   createFile,
   // updateFile,
   deleteFile,
-  accessGooleDriveFiles
+  accessGoogleDriveFiles
 };

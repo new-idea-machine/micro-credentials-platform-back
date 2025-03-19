@@ -10,7 +10,7 @@ import {
   createFile,
   // updateFile,
   deleteFile,
-  accessGooleDriveFiles
+  accessGoogleDriveFiles
 } from "./controller.js";
 
 const router = express.Router();
@@ -40,6 +40,6 @@ router.post("/files/upload", createFile);
 router.delete("/files/:fileID", deleteFile);
 
 // New route to fetch files from Google Drive
-router.get("/drive/file/:id", accessGooleDriveFiles);
+router.get("/drive/file/:id", accessGoogleDriveFiles);
 
 export default router;
