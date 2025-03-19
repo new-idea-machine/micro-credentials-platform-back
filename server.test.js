@@ -228,7 +228,7 @@ test("Register New Learner User (Missing E-mail Address)", async function () {
   /*
   TEST 4:  Register a new learner user with a missing e-mail address.
 
-  EXPECTED RESULT:  Fail (status 401).
+  EXPECTED RESULT:  Fail (status 406).
   */
 
   const badData = structuredClone(learnerUserData);
@@ -243,7 +243,7 @@ test("Register New Learner User (Missing E-mail Address)", async function () {
   );
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(401);
+  expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
 
@@ -253,7 +253,7 @@ test("Register New Learner User (Bad E-mail Address)", async function () {
   /*
   TEST 5:  Register a new learner user with a bad e-mail address.
 
-  EXPECTED RESULT:  Fail (status 401).
+  EXPECTED RESULT:  Fail (status 406).
   */
 
   const badData = structuredClone(learnerUserData);
@@ -268,7 +268,7 @@ test("Register New Learner User (Bad E-mail Address)", async function () {
   );
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(401);
+  expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
 
@@ -278,7 +278,7 @@ test("Register New Learner User (Missing Password)", async function () {
   /*
   TEST 6:  Register a new learner user with a missing password.
 
-  EXPECTED RESULT:  Fail (status 401).
+  EXPECTED RESULT:  Fail (status 406).
   */
 
   const badData = structuredClone(learnerUserData);
@@ -293,7 +293,7 @@ test("Register New Learner User (Missing Password)", async function () {
   );
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(401);
+  expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
 
@@ -441,7 +441,7 @@ test("Get a User Without Providing an E-mail", async function () {
   /*
   TEST 1:  Get a user without providing an e-mail.
 
-  EXPECTED RESULT:  Fail (status 401).
+  EXPECTED RESULT:  Fail (status 404).
   */
 
   const credentials = structuredClone(learnerUserData.credentials);
@@ -451,7 +451,7 @@ test("Get a User Without Providing an E-mail", async function () {
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(401);
+  expect(response?.status).toBe(404);
   expect(result).toBe(undefined);
 });
 

@@ -5,15 +5,14 @@ const router = express.Router();
 
 router.get("/", getAll);
 
-router.get("/user", get);
-
 router.get("/auth", getAuth);
 
 router.post("/auth", create);
 
-router.patch("/user/:id", update);
+router.get("/user", get);
 
-//Currently empties database, will change to only delete one user when done
-router.delete("/", removeOne);
+router.patch("/user", update);
+
+router.delete("/user", removeOne);
 
 export default router;
