@@ -52,8 +52,7 @@ const userSchema = new mongoose.Schema({
  * @throws {TypeError} `TypeError` if `password` is not a string
  */
 userSchema.methods.passwordMatches = async function (password) {
-  if (typeof password !== "string")
-    throw new TypeError("\"password\" must be a string");
+  if (typeof password !== "string") throw new TypeError('"password" must be a string');
 
   try {
     return await bcrypt.compare(password, this.password);
@@ -71,7 +70,9 @@ userSchema.methods.passwordMatches = async function (password) {
   }
 };
 
-userSchema.pre("save",
+userSchema.pre(
+  "save",
+
   /*
   If a document's ".password" member has been modified then encrypt it before storing it in the
   database.
@@ -91,10 +92,11 @@ userSchema.pre("save",
     } else {
       next();
     }
-  });
+  }
+);
 
 const userModel = database.model("users", userSchema);
 const learnerModel = database.model("learner", learnerSchema);
 const instructorModel = database.model("instructor", instructorSchema);
 
-export { userModel, learnerModel, instructorModel };
+export { database, userModel, learnerModel, instructorModel };
