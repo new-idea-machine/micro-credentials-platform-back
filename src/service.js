@@ -1,4 +1,4 @@
-import { userModel, learnerModel, instructorModel, fileModel } from "./model.js";
+import { userModel, learnerSchema, instructorSchema, fileModel } from "./model.js";
 
 //For file upload to Google Drive and saving metadata to MongoDB
 import { google } from "googleapis";
@@ -21,8 +21,8 @@ async function create(user) {
     username: user.userInfo.name,
     email: user.userInfo.email,
     password: user.password,
-    learnerData: new learnerModel({}),
-    instructorData: user.isInstructor ? new instructorModel({}) : null
+    learnerData: new learnerSchema({}),
+    instructorData: user.isInstructor ? new instructorSchema({}) : null
   });
   const newDocument = await registrant.save();
   return { userUID: newDocument._id };

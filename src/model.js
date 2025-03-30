@@ -120,4 +120,4 @@ const userModel = database.model("users", userSchema);
 //For demoing purpose only and does not represent the final product
 const fileModel = database.model("files", fileSchema);
 
-export { database, userModel, learnerModel, instructorModel, fileModel };
+export { database, userSchema, learnerSchema, instructorSchema, userModel, fileModel };
