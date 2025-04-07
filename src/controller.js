@@ -1,8 +1,8 @@
 import { userModel } from "./model.js";
 import validator from "validator";
 import * as service from "./service.js";
-import { reverseMultiplyAndSum } from "validator/lib/util/algorithms.js";
 import jwt from "jsonwebtoken";
+import { authenticationMiddleware } from "../tokenManager.js";
 async function getAll(req, res) {
   try {
     service.getAll();
@@ -13,7 +13,7 @@ async function getAll(req, res) {
 }
 
 async function get(req, res) {
-  const authorizationData = getAuthorizationData(req);
+  const authorizationData = service.getAuthorizationData(req);
   if (!authorizationData?.userId) {
     res.setHeader("WWW-Authenticate", 'Basic realm="user"');
     res.status(401).send();
@@ -160,10 +160,26 @@ async function removeOne(req, res) {
  */
 async function sendRecoveryEmail(req, res) {
   try {
-    const email = process.env.EMAIL;
-    await service.passwordRecovery(email).then(res.sendStatus(200));
+    // jimmy to add authmiddleware to server first
+    const authHeader = req.headers["authorization"];
+    const token = authHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.SECRET_KEY);
+    const email = decodedToken.name;
+    console.log(email);
+    const checkedEmail = await userModel.findOne({ email: email }).lean();
+    if (checkedEmail) {
+      await service.passwordRecovery(email).then(res.sendStatus(200));
+    } else {
+      await service
+        .sendEmail(
+          email,
+          "Password recovery was requested for this e-mail address but there isn't an account associated with it."
+        )
+        .then(res.sendStatus(200));
+    }
+    //await service.passwordRecovery(email).then(res.sendStatus(200))
   } catch (error) {
-    res.status(503).json({ msg: "Cant reach server" });
+    res.status(504);
   }
 }
 
@@ -176,42 +192,39 @@ async function sendRecoveryEmail(req, res) {
  */
 async function resetPasswordReceiver(req, res) {
   try {
-    const token = jwt.verify(req.params.i, process.env.SECRET_KEY);
-    const email = token.name;
+    const authHeader = req.headers["authorization"];
+    const token = authHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.SECRET_KEY);
+    const email = decodedToken.name;
+    const password = req.token || "newpass";
     if (token) {
-      res.send(
-        '<form method="post" action="/auth/resetPassword"><input type="password" name="password" required><script>user</script><input type="submit" value="Reset Password"></form>'
-      );
+      console.log("test");
+      await service.updatePassword(email, password).then(res.sendStatus(200));
+      // res.send(
+      //   '<form method="post" action="/auth/resetPassword"><input type="password" name="password" required><script>user</script><input type="submit" value="Reset Password"></form>'
+      // );
     } else {
-      res.status(404).send("Invalid or expired token");
+      res.status(401);
+      console.log("test123");
     }
   } catch (error) {
-    res.status(503).json({ msg: "Cant reach server" });
+    res.status(504);
   }
 }
 
-/**
- * @description resets password from form
- * @param {*} req recieves relevent html information
- * @param {*} res sends relevent error message or new password to back end if successful
- */
-async function resetPassword(req, res) {
-  try {
-    const newPassword = req.body.password;
-    const email = jwt.verify(req.headers.referer.split("/")[5], process.env.SECRET_KEY).name;
-    service.updatePassword(email, newPassword);
-  } catch (error) {
-    res.status(503).json({ msg: "Cant reach server" });
-  }
-}
+// /**
+//  * @description resets password from form
+//  * @param {*} req recieves relevent html information
+//  * @param {*} res sends relevent error message or new password to back end if successful
+//  */
+// async function resetPassword(req, res) {
+//   try {
+//     const newPassword = req.body.password;
+//     const email = jwt.verify(req.headers.referer.split("/")[5], process.env.SECRET_KEY).name;
+//     service.updatePassword(email, newPassword);
+//   } catch (error) {
+//     res.status(503).json({ msg: "Cant reach server" });
+//   }
+// }
 
-export {
-  getAll,
-  get,
-  create,
-  removeOne,
-  sendRecoveryEmail,
-  getAuth,
-  resetPasswordReceiver,
-  resetPassword
-};
+export { getAll, get, create, removeOne, sendRecoveryEmail, getAuth, resetPasswordReceiver };

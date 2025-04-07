@@ -3,7 +3,6 @@ import { userModel, learnerModel, instructorModel } from "./model.js";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js";
 import { ClientSecretCredential } from "@azure/identity";
-import crypto from "crypto";
 import jwt from "jsonwebtoken";
 dotenv.config();
 
@@ -117,10 +116,12 @@ async function sendEmail(email, content) {
 }
 
 async function passwordRecovery(account) {
-  const access_token = jwt.sign({ name: account }, process.env.SECRET_KEY, { expiresIn: "1h" });
+  const access_token = jwt.sign({ name: account }, process.env.SECRET_KEY, {
+    expiresIn: "20m"
+  });
   sendEmail(
     account,
-    `Click the following link to reset your password: http://localhost:5001/auth/recovery/${access_token}"`
+    `Click the following link to reset your password: ${process.env.URL}${access_token}"`
   );
 }
 
@@ -132,5 +133,5 @@ export {
   removeOne,
   getAuthorizationData,
   passwordRecovery,
-  resetHolder
+  sendEmail
 };

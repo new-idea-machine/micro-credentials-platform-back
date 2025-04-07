@@ -33,9 +33,7 @@ function getUserUid(signedToken) {
   removeExpiredTokens();
   try {
     const decodedToken = JWT.verify(signedToken, secretKey);
-    const entry = loggedInUsers.find(
-      (entry) => entry.token === decodedToken.token
-    );
+    const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
     if (entry) {
       entry.lastAccessed = new Date();
       return entry.userUid;
@@ -51,9 +49,7 @@ function logout(signedToken) {
   try {
     const decodedToken = JWT.verify(signedToken, secretKey);
     const initialLength = loggedInUsers.length;
-    loggedInUsers = loggedInUsers.filter(
-      (entry) => entry.token !== decodedToken.token
-    );
+    loggedInUsers = loggedInUsers.filter((entry) => entry.token !== decodedToken.token);
     return loggedInUsers.length < initialLength;
   } catch (error) {
     return false;
@@ -98,10 +94,7 @@ function authenticationMiddleware(req, res, next) {
           entry.lastAccessed = new Date();
           req.userUid = entry.userUid;
         }
-
-      } catch (error) {
-
-      }
+      } catch (error) {}
     }
   }
   next();

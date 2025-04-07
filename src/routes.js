@@ -6,8 +6,7 @@ import {
   removeOne,
   sendRecoveryEmail,
   getAuth,
-  resetPasswordReceiver,
-  resetPassword
+  resetPasswordReceiver
 } from "./controller.js";
 
 import dotenv from "dotenv";
@@ -27,10 +26,10 @@ router.delete("/", removeOne);
 
 router.get("/auth/recovery", sendRecoveryEmail);
 
-router.get("/auth/recovery/:i", resetPasswordReceiver);
+router.get("/auth/recovery/:token", resetPasswordReceiver);
 
 // needs to be changed to patch when front end done, the form I'm sending for now only accepts
 // get and post
-router.post("/auth/resetPassword", resetPassword);
+// router.post("/auth/resetPassword", resetPassword);
 
 export default router;

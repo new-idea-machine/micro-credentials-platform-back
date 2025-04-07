@@ -18,7 +18,6 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   learnerData: { type: learnerSchema, required: true },
   instructorData: { type: instructorSchema }
-
 });
 
 const userModel = database.model("users", userSchema);
