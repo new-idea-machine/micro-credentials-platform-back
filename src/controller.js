@@ -7,9 +7,13 @@
  * @module controller
  */
 
-import { database, userModel } from "./model.js";
 import validator from "validator";
+import multer from "multer";
+import { database, userModel } from "./model.js";
 import { generateToken, getUserUid } from "../tokenManager.js";
+import * as service from "./service.js";
+
+const upload = multer({ dest: "uploads/" });
 
 /**
  * Check to see if the database is online.

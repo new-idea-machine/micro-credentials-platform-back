@@ -4,7 +4,6 @@ import { userModel, learnerSchema, instructorSchema, fileModel } from "./model.j
 import { google } from "googleapis";
 import fs from "fs";
 import path from "path";
-import { getAuth } from "./controller.js";
 
 async function getAll() {
   const users = await userModel.find();
@@ -103,7 +102,7 @@ async function uploadFileToGoogleDrive(auth, file) {
     body: fs.createReadStream(file.path)
   };
 
-  const response = await drive.files.create({
+  const response = drive.files.create({
     resource: fileMetadata,
     media: media,
     fields: "id, name, mimeType, webViewLink"
@@ -172,11 +171,7 @@ async function deleteFile(fileID) {
 
 //For demoing purpose only and does not represent the final product
 async function getAllFiles(req, res) {
-  const files = await fileModel.find();
-
-  if (!files.length) throw new Error("No files found");
-
-  return files;
+  return await fileModel.find();
 }
 
 //For demoing purpose only and does not represent the final product
