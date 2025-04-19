@@ -12,6 +12,7 @@ import multer from "multer";
 import { database, userModel } from "./model.js";
 import { generateToken, getUserUid } from "../tokenManager.js";
 import * as service from "./service.js";
+import * as googleDrive from "./googleDrive.js";
 
 const upload = multer({ dest: "uploads/" });
 
@@ -265,7 +266,7 @@ async function accessGoogleDriveFiles(req, res) {
     const fileId = req.params.id;
 
     // Call the getFile function from service.js
-    const { fileStream, mimeType, fileName } = await service.accessGoogleDriveFiles(fileId);
+    const { fileStream, mimeType, fileName } = await googleDrive.accessGoogleDriveFiles(fileId);
 
     // Set the response headers
     res.setHeader("Content-Type", mimeType);
