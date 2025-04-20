@@ -1,6 +1,6 @@
 import fs from "fs";
 import { userModel, learnerSchema, instructorSchema, fileModel } from "./model.js";
-import { getGoogleAuth, uploadFileToGoogleDrive, deleteFileFromGoogleDrive } from "./googleDrive.js";
+import { uploadFileToGoogleDrive, deleteFileFromGoogleDrive } from "./googleDrive.js";
 
 async function getAll() {
   const users = await userModel.find();
@@ -77,11 +77,10 @@ function getAuthorizationData(request) {
 //For demoing purpose only and does not represent the final product
 //Function to handle the complete process of uploading files and saving metadata
 async function createFile(files) {
-  const auth = await getGoogleAuth();
   const savedFiles = [];
 
   for (const file of files) {
-    const uploadedFile = await uploadFileToGoogleDrive(auth, file);
+    const uploadedFile = await uploadFileToGoogleDrive(file);
 
     //Save file metadata to MongoDB
     const savedFile = await fileModel.create({

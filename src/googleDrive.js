@@ -1,45 +1,101 @@
-import { google } from "googleapis";
+import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
+import { google } from "googleapis";
 
-//For demoing purpose only and does not represent the final product
-//Helper function to handle Google Drive authentication
-async function getGoogleAuth() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: path.join(process.cwd(), "googleDriveOAuth.json"),
-    scopes: ["https://www.googleapis.com/auth/drive.file"]
-  });
+dotenv.config();
 
-  const authClient = await auth.getClient();
+const authenticationKeyFile = path.join(process.cwd(), "googleDriveAuth.json");
 
-  return authClient;
+if (!fs.existsSync(authenticationKeyFile)) {
+  console.log(`Google Authentication key file "${authenticationKeyFile}" not found.`);
+  console.log("To access Google Drive, create a service account and download a key file.");
 }
+
+const auth = new google.auth.GoogleAuth({
+  keyFile: authenticationKeyFile,
+  scopes: ["https://www.googleapis.com/auth/drive.file"]
+});
+
+google.options({ auth });
+
+const drive = google.drive({ version: "v3" });
+const parentFolder = process.env.GOOGLE_DRIVE_MEDIA_FILES_FOLDER;
+
+if (parentFolder) {
+  console.log(`Google Drive parent folder ID:  ${parentFolder}`);
+} else {
+  console.log("Google Drive parent folder not specified.");
+  console.log(
+    'To access Google Drive, add "GOOGLE_DRIVE_MEDIA_FILES_FOLDER=<folder ID>" to ".env"' +
+      "(<folder ID> can be derived from the shared folder's link URL)"
+  );
+}
+// Function to delete all files created by the service account
+async function cleanupAllFiles() {
+  try {
+    // Get list of all files created by this service account
+    const response = await drive.files.list({
+      pageSize: 100, // Adjust as needed
+      fields: "files(id, name)"
+    });
+
+    const files = response.data.files;
+
+    if (files.length) {
+      console.log(`Found ${files.length} files. Deleting...`);
+
+      // Delete each file
+      const deletePromises = files.map((file) => {
+        console.log(`Deleting file: ${file.name} (${file.id})`);
+        return drive.files
+          .delete({
+            fileId: file.id
+          })
+          .catch((err) => {
+            console.error(`Failed to delete ${file.name}: ${err.message}`);
+          });
+      });
+
+      await Promise.all(deletePromises);
+      console.log("All files deleted successfully");
+    } else {
+      console.log("No files found to delete");
+    }
+
+    return { success: true, message: `Deleted ${files.length} files` };
+  } catch (error) {
+    console.error("Error cleaning up files:", error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+// cleanupAllFiles();
 
 //For demoing purpose only and does not represent the final product
 //Helper function to upload a file to Google Drive
-async function uploadFileToGoogleDrive(auth, file) {
-  const drive = google.drive({ version: "v3", auth });
+async function uploadFileToGoogleDrive(file) {
+  if (!parentFolder) {
+    return undefined;
+  } else {
+    const fileMetadata = { name: file.originalname, parents: [parentFolder] };
 
-  const fileMetadata = { name: file.originalname };
+    const media = {
+      mimeType: file.mimetype,
+      body: fs.createReadStream(file.path)
+    };
 
-  const media = {
-    mimeType: file.mimetype,
-    body: fs.createReadStream(file.path)
-  };
+    const response = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: "id, name, mimeType, webViewLink"
+    });
 
-  const response = await drive.files.create({
-    resource: fileMetadata,
-    media: media,
-    fields: "id, name, mimeType, webViewLink"
-  });
-
-  return response.data;
+    return response.data;
+  }
 }
 
 async function deleteFileFromGoogleDrive(fileId) {
-  const auth = await getGoogleAuth();
-  const drive = google.drive({ version: "v3", auth });
-
   try {
     await drive.files.delete({
       fileId: fileId
@@ -55,36 +111,33 @@ async function deleteFileFromGoogleDrive(fileId) {
 //For demoing purpose only and does not represent the final product
 //Access files uploaded to Google Drive
 async function accessGoogleDriveFiles(fileId) {
-  try {
-    const auth = await getGoogleAuth();
-    const drive = google.drive({ version: "v3", auth });
+  if (!parentFolder) {
+    return undefined;
+  } else {
+    try {
+      // Get the file metadata to determine the MIME type
+      const fileMetadata = await drive.files.get({
+        fileId: fileId,
+        fields: "mimeType, name",
+        parents: [parentFolder]
+      });
 
-    // Get the file metadata to determine the MIME type
-    const fileMetadata = await drive.files.get({
-      fileId: fileId,
-      fields: "mimeType, name"
-    });
+      const mimeType = fileMetadata.data.mimeType;
+      const fileName = fileMetadata.data.name;
 
-    const mimeType = fileMetadata.data.mimeType;
-    const fileName = fileMetadata.data.name;
+      // Get the file content
+      const fileStream = await drive.files.get(
+        { fileId: fileId, alt: "media" },
+        { responseType: "stream" }
+      );
 
-    // Get the file content
-    const fileStream = await drive.files.get(
-      { fileId: fileId, alt: "media" },
-      { responseType: "stream" }
-    );
-
-    return { fileStream, mimeType, fileName };
-  } catch (error) {
-    console.error("Error fetching file from Google Drive:", error.message);
-    console.error("Error details:", error.response?.data || error.stack);
-    throw new Error("Failed to fetch file from Google Drive.");
+      return { fileStream, mimeType, fileName };
+    } catch (error) {
+      console.error("Error fetching file from Google Drive:", error.message);
+      console.error("Error details:", error.response?.data || error.stack);
+      throw new Error("Failed to fetch file from Google Drive.");
+    }
   }
 }
 
-export {
-  getGoogleAuth,
-  uploadFileToGoogleDrive,
-  deleteFileFromGoogleDrive,
-  accessGoogleDriveFiles
-};
+export { uploadFileToGoogleDrive, deleteFileFromGoogleDrive, accessGoogleDriveFiles };
