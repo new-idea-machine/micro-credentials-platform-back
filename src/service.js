@@ -115,10 +115,11 @@ async function sendEmail(email, content) {
     });
 }
 
-async function passwordRecovery(account) {
-  const access_token = jwt.sign({ name: account }, process.env.SECRET_KEY, {
-    expiresIn: "20m"
-  });
+async function passwordRecovery(account, token) {
+  // const access_token = jwt.sign({ name: account }, process.env.SECRET_KEY, {
+  //   expiresIn: "20m"
+  // });
+  const access_token = token;
   sendEmail(
     account,
     `Click the following link to reset your password: ${process.env.URL}${access_token}"`

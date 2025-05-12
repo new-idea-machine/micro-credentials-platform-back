@@ -4,32 +4,18 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import { routes } from "./src/index.js";
 import { authenticationMiddleware } from "./tokenManager.js";
+import { getUserUid, generateToken } from "./tokenManager.js";
+import { database, userModel } from "./src/model.js";
 
 dotenv.config();
 const app = express();
 
-// app.use((req, res, next) => {
-//   console.log(req.headers["authorization"]);
-//   next();
-// });
-
-const urlencodedParser = bodyParser.urlencoded({ extended: false });
-app.use(bodyParser.json(), urlencodedParser);
-app.use(cors());
-
-app.listen(process.env.PORT, () => {
-  console.log(`App is Listening on PORT ${process.env.PORT}`);
+app.get("/token", async (req, res) => {
+  const user = await userModel.find({ email: "bbeam1@gmail.com" });
+  const token = generateToken(user[0]._id);
+  const num = getUserUid(token);
+  res.status(200).json({ msg: token, num });
 });
-
-app.use("/", routes);
-
-//Change the default response for unhandled requests to status code 400
-app.use((req, res) => {
-  console.log(`Unhandled request:  ${req.method} ${req.url}`);
-  res.status(400).json({ msg: "Request not handled" });
-});
-
-import { getUserUid } from "./tokenManager.js";
 
 app.get("/validate-token", (req, res) => {
   const authHeader = req.headers["authorization"];
@@ -46,4 +32,21 @@ app.get("/validate-token", (req, res) => {
   } else {
     res.status(401).json({ msg: "Invalid or expired token" });
   }
+});
+
+const urlencodedParser = bodyParser.urlencoded({ extended: false });
+app.use(bodyParser.json(), urlencodedParser);
+app.use(cors());
+app.use(authenticationMiddleware);
+
+app.listen(process.env.PORT, () => {
+  console.log(`App is Listening on PORT ${process.env.PORT}`);
+});
+
+app.use("/", routes);
+
+//Change the default response for unhandled requests to status code 400
+app.use((req, res) => {
+  console.log(`Unhandled request:  ${req.method} ${req.url}`);
+  res.status(400).json({ msg: "Request not handled" });
 });

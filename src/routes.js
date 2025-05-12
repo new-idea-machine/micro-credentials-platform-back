@@ -6,7 +6,9 @@ import {
   removeOne,
   sendRecoveryEmail,
   getAuth,
-  resetPasswordReceiver
+  resetPasswordReceiver,
+  update,
+  authBasic
 } from "./controller.js";
 
 import dotenv from "dotenv";
@@ -15,21 +17,19 @@ const router = express.Router();
 
 router.get("/", getAll);
 
-router.get("/user", get);
-
 router.get("/auth", getAuth);
 
 router.post("/auth", create);
+
+router.get("/user", get);
+
+router.patch("/user", update);
 
 //Currently empties database, will change to only delete one user when done
 router.delete("/", removeOne);
 
 router.get("/auth/recovery", sendRecoveryEmail);
 
-router.get("/auth/recovery/:token", resetPasswordReceiver);
-
-// needs to be changed to patch when front end done, the form I'm sending for now only accepts
-// get and post
-// router.post("/auth/resetPassword", resetPassword);
+router.get("/auth/recovery/:token", authBasic, resetPasswordReceiver);
 
 export default router;
