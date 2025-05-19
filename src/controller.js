@@ -7,12 +7,16 @@
  * @module controller
  */
 
-import { database, userModel } from "./model.js";
 import validator from "validator";
+import multer from "multer";
+import { database, userModel } from "./model.js";
 import { generateToken, getUserUid } from "../tokenManager.js";
 import * as service from "./service.js";
 import jwt from "jsonwebtoken";
 import { response } from "express";
+import * as googleDrive from "./googleDrive.js";
+
+const upload = multer({ dest: "uploads/" });
 
 /**
  * Check to see if the database is online.
@@ -273,14 +277,87 @@ async function resetPasswordReceiver(req, res) {
   await service.updatePassword(email, password).then(res.sendStatus(200));
 }
 
+//For demoing purpose only and does not represent the final product
+async function getAllFiles(req, res) {
+  try {
+    const files = await service.getAllFiles();
+    res.status(200).json(files);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+}
+
+//For demoing purpose only and does not represent the final product
+async function createFile(req, res) {
+  await upload.array("files")(req, res, async function (err) {
+    if (err) {
+      return res.status(400).send({ message: `File upload failed. ${err}` });
+    }
+
+    try {
+      //Call processFiles to handle the uploaded files
+
+      const savedFiles = await service.createFile(req.files);
+
+      //Respond with the saved file metadata
+      res.status(200).json(savedFiles);
+    } catch (err) {
+      res.status(500).send({ message: err.message });
+    }
+  });
+}
+
+//For demoing purpose only and does not represent the final product
+// async function updateFile(req, res) {
+//   service.updateFile(req, res);
+// }
+
+//For demoing purpose only and does not represent the final product
+async function deleteFile(req, res) {
+  try {
+    const { fileID } = req.params;
+    await service.deleteFile(fileID);
+    res.status(200).json({ message: `File deleted successfully.` });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+}
+
+//For demoing purpose only and does not represent the final product
+//Access files uploaded to Google Drive
+async function accessGoogleDriveFiles(req, res) {
+  try {
+    const fileId = req.params.id;
+
+    // Call the getFile function from service.js
+    const { fileStream, mimeType, fileName } = await googleDrive.accessGoogleDriveFiles(fileId);
+
+    // Set the response headers
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+
+    // Pipe the file content to the response
+    fileStream.data.pipe(res);
+  } catch (error) {
+    console.error("Error from controller:", error);
+    console.error("Error details:", error.response?.data || error.stack);
+    res.status(500).json({ message: error.message });
+  }
+}
+
 export {
   getAll,
   get,
   create,
   removeOne,
-  sendRecoveryEmail,
   getAuth,
+  sendRecoveryEmail,
   resetPasswordReceiver,
   update,
-  authBasic
+  authBasic,
+  getAllFiles,
+  createFile,
+  // updateFile,
+  deleteFile,
+  accessGoogleDriveFiles
 };

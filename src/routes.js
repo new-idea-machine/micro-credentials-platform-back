@@ -4,11 +4,16 @@ import {
   get,
   create,
   removeOne,
-  sendRecoveryEmail,
   getAuth,
-  resetPasswordReceiver,
   update,
-  authBasic
+  authBasic,
+  sendRecoveryEmail,
+  resetPasswordReceiver,
+  getAllFiles,
+  createFile,
+  // updateFile,
+  deleteFile,
+  accessGoogleDriveFiles
 } from "./controller.js";
 
 import dotenv from "dotenv";
@@ -31,5 +36,20 @@ router.delete("/", removeOne);
 router.get("/auth/recovery", sendRecoveryEmail);
 
 router.get("/auth/recovery/:token", authBasic, resetPasswordReceiver);
+
+//For demoing purpose only and does not represent the final product
+router.get("/files", getAllFiles);
+
+//For demoing purpose only and does not represent the final product
+router.post("/files/upload", createFile);
+
+//For demoing purpose only and does not represent the final product
+//router.patch("/files/:fileID", updateFile);
+
+//For demoing purpose only and does not represent the final product
+router.delete("/files/:fileID", deleteFile);
+
+// New route to fetch files from Google Drive
+router.get("/drive/file/:id", accessGoogleDriveFiles);
 
 export default router;
