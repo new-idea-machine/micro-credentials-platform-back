@@ -1,20 +1,48 @@
+// courseOverview.js
 import Course from './courseSchema.js';
 import mongoose from 'mongoose';
 
+// Constants
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+const DEFAULT_SORT_BY = 'title';
+const DEFAULT_SORT_ORDER = 'asc';
+
 async function getAllCourses(req, res) {
   try {
-    const { page = 1, limit = 10, sortBy = 'title', sortOrder = 'asc', title, instructorId } = req.query;
+    const {
+      page = DEFAULT_PAGE,
+      limit = DEFAULT_LIMIT,
+      sortBy = DEFAULT_SORT_BY,
+      sortOrder = DEFAULT_SORT_ORDER,
+      title,
+      instructorId
+    } = req.query;
 
-    const skip = (Number(page) - 1) * Number(limit);
+    // Validate and sanitize inputs
+    const pageNum = Math.max(Number(page), DEFAULT_PAGE);
+    const limitNum = Math.max(Number(limit), 1);
+    const skip = (pageNum - 1) * limitNum;
     const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
-    // Build query based on filters
+    // Build safe query
     const query = {};
-    if (title) query.title = new RegExp(title, 'i'); // Case-insensitive search
-    if (instructorId) query.instructorId = instructorId;
+    if (title) {
+      // Simple sanitization - escape regex special characters
+      const sanitizedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.title = new RegExp(sanitizedTitle, 'i');
+    }
+    if (instructorId) {
+      if (!mongoose.Types.ObjectId.isValid(instructorId)) {
+        return res.status(400).json({ error: 'Invalid instructor ID format' });
+      }
+      query.instructorId = instructorId;
+    }
 
-    const courses = await Course.find(query).sort(sort).skip(skip).limit(Number(limit)).lean();
-    const totalCourses = await Course.countDocuments(query);
+    const [courses, totalCourses] = await Promise.all([
+      Course.find(query).sort(sort).skip(skip).limit(limitNum).lean(),
+      Course.countDocuments(query)
+    ]);
 
     if (courses.length === 0) {
       return res.status(404).json({ msg: 'No courses found' });
@@ -22,8 +50,8 @@ async function getAllCourses(req, res) {
 
     res.json({
       totalCourses,
-      totalPages: Math.ceil(totalCourses / Number(limit)),
-      currentPage: Number(page),
+      totalPages: Math.ceil(totalCourses / limitNum),
+      currentPage: pageNum,
       courses,
     });
   } catch (error) {
