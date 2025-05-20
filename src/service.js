@@ -1,6 +1,14 @@
+import dotenv from "dotenv";
+import { Client } from "@microsoft/microsoft-graph-client";
+import { TokenCredentialAuthenticationProvider } from "@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js";
+import { ClientSecretCredential } from "@azure/identity";
+import jwt from "jsonwebtoken";
 import fs from "fs";
 import { userModel, learnerSchema, instructorSchema, fileModel } from "./model.js";
 import { uploadFileToGoogleDrive, deleteFileFromGoogleDrive } from "./googleDrive.js";
+dotenv.config();
+
+const resetHolder = [{ email: "no", token: "fake" }];
 
 async function getAll() {
   const users = await userModel.find();
@@ -24,8 +32,8 @@ async function create(user) {
   return { userUID: newDocument._id };
 }
 
-async function updatePassword(name, newPassword) {
-  await userModel.updateOne({ username: name }, { password: newPassword });
+async function updatePassword(email, newPassword) {
+  await userModel.updateOne({ email: email }, { password: newPassword });
 }
 
 //Currently empties database, will change to only delete one user when done
@@ -72,6 +80,52 @@ function getAuthorizationData(request) {
 
     return { token: Buffer.from(authorization.parameters, "base64") };
   } else return null;
+}
+//update open api spec?
+async function sendEmail(email, content) {
+  const credential = new ClientSecretCredential(
+    process.env.TENANT_ID, // Directory (tenant) ID
+    process.env.APPLICATION_ID, // Application (client) ID
+    process.env.APPLICATION_SECRET // Application Secret
+  );
+  const authProvider = new TokenCredentialAuthenticationProvider(credential, {
+    scopes: ["https://graph.microsoft.com/.default"]
+  });
+  const client = Client.initWithMiddleware({ debugLogging: true, authProvider });
+  const sendMail = {
+    message: {
+      subject: "Password Reset",
+      body: {
+        contentType: "Text",
+        content: content
+      },
+      toRecipients: [
+        {
+          emailAddress: { address: email } // Recipient's e-mail address
+        }
+      ]
+    },
+    saveToSentItems: "false"
+  };
+  client
+    .api("/users/donotreply@untappedenergy.ca/sendMail") // Shared mailbox e-mail address
+    .header("Content-type", "application/json")
+    .post(sendMail, (err, res, rawResponse) => {
+      console.log(res);
+      console.log(rawResponse);
+      console.log(err);
+    });
+}
+
+async function passwordRecovery(account, token) {
+  // const access_token = jwt.sign({ name: account }, process.env.SECRET_KEY, {
+  //   expiresIn: "20m"
+  // });
+  const access_token = token;
+  sendEmail(
+    account,
+    `Click the following link to reset your password: ${process.env.URL}${access_token}"`
+  );
 }
 
 //For demoing purpose only and does not represent the final product
@@ -145,8 +199,10 @@ export {
   updatePassword,
   removeOne,
   getAuthorizationData,
+  passwordRecovery,
+  sendEmail,
   getAllFiles,
   // updateFile,
   deleteFile,
-  createFile,
+  createFile
 };

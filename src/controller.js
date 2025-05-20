@@ -12,6 +12,8 @@ import multer from "multer";
 import { database, userModel } from "./model.js";
 import { generateToken, getUserUid } from "../tokenManager.js";
 import * as service from "./service.js";
+import jwt from "jsonwebtoken";
+import { response } from "express";
 import * as googleDrive from "./googleDrive.js";
 
 const upload = multer({ dest: "uploads/" });
@@ -25,9 +27,9 @@ const upload = multer({ dest: "uploads/" });
  * @param {Object} res - Express response object
  */
 function getAll(req, res) {
-    const connected = 1;
+  const connected = 1;
 
-    res.status(database.readyState === connected ? 200 : 504).send();
+  res.status(database.readyState === connected ? 200 : 504).send();
 }
 
 /**
@@ -63,12 +65,12 @@ async function get(req, res) {
 
 /**
  * Authenticate a user with their credentials and send back an access token.
-  *
+ *
  * @see "GET /auth" in "/openapi.yaml" for details.
  *
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
-*/
+ */
 async function getAuth(req, res) {
   if (!("userId" in req) || !("password" in req)) {
     res.setHeader("WWW-Authenticate", 'Basic realm="user"');
@@ -213,6 +215,68 @@ async function removeOne(req, res) {
   }
 }
 
+/**
+ * @description sends email for password recovery, email source will be changed upon front end
+ * completion
+ * @param {*} req will be altered to recieve email address when front end component complete
+ * @param {*} res either ok or cant reach server
+ */
+async function sendRecoveryEmail(req, res) {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader.split(" ")[1];
+    const decodedToken = await userModel.findOne({ _id: getUserUid(token) });
+    const email = decodedToken.email;
+    if (email) {
+      await service.passwordRecovery(email, token).then(res.sendStatus(200));
+    } else {
+      await service
+        .sendEmail(
+          email,
+          "Password recovery was requested for this e-mail address but there isn't an account associated with it."
+        )
+        .then(res.sendStatus(200));
+    }
+  } catch (error) {
+    res.status(504);
+  }
+}
+
+/**
+ * @description recieves request for password reset from email, res.send being too long
+ * is intentional, it wasnt working split up. will be changed to a link to the corresponding
+ * front end page when that is ready
+ * @param {*} req used for getting token for verification
+ * @param {*} res sends relevent error message or form for password reset if successful
+ */
+async function authBasic(req, res, next) {
+  try {
+    const token = req.params.token;
+    const user = await userModel.findOne({ _id: getUserUid(token) });
+    const email = user.email;
+    const auth = { login: email, password: "0" };
+
+    const b64auth = (req.headers.authorization || "").split(" ")[1] || "";
+    const [login, password] = Buffer.from(b64auth, "base64").toString().split(":");
+
+    if (login && password && login === auth.login) {
+      req.email = email;
+      req.password = password;
+      return next();
+    }
+    res.set("WWW-Authenticate", 'Basic realm="401"');
+    res.status(401).send("Authentication required.");
+  } catch (error) {
+    res.status(504);
+  }
+}
+
+async function resetPasswordReceiver(req, res) {
+  const email = req.email;
+  const password = req.password;
+  await service.updatePassword(email, password).then(res.sendStatus(200));
+}
+
 //For demoing purpose only and does not represent the final product
 async function getAllFiles(req, res) {
   try {
@@ -286,8 +350,11 @@ export {
   get,
   create,
   removeOne,
-  update,
   getAuth,
+  sendRecoveryEmail,
+  resetPasswordReceiver,
+  update,
+  authBasic,
   getAllFiles,
   createFile,
   // updateFile,
