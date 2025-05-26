@@ -16,7 +16,8 @@ async function getAllCourses(req, res) {
       sortBy = DEFAULT_SORT_BY,
       sortOrder = DEFAULT_SORT_ORDER,
       title,
-      instructorId
+      instructorId,
+      code
     } = req.query;
 
     // Validate and sanitize inputs
@@ -38,15 +39,15 @@ async function getAllCourses(req, res) {
       }
       query.instructorId = instructorId;
     }
+    if (code) {
+      const sanitizedCode = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.code = new RegExp(sanitizedCode, 'i');
+    }
 
     const [courses, totalCourses] = await Promise.all([
       Course.find(query).sort(sort).skip(skip).limit(limitNum).lean(),
       Course.countDocuments(query)
     ]);
-
-    if (courses.length === 0) {
-      return res.status(404).json({ msg: 'No courses found' });
-    }
 
     res.json({
       totalCourses,
@@ -70,7 +71,7 @@ async function getCourseById(req, res) {
   try {
     const course = await Course.findById(courseId).lean();
     if (!course) {
-      return res.status(404).json({ msg: `Course with ID ${courseId} not found` });
+      return res.status(404).json({ error: `Course with ID ${courseId} not found` });
     }
     res.json(course);
   } catch (error) {

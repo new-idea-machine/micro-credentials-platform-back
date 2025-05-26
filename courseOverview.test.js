@@ -1,16 +1,18 @@
 import { getAllCourses, getCourseById } from './courseOverview.js';
-import Course from './courseSchema.js'; // Mock this
-import httpMocks from 'node-mocks-http';
+import Course from './courseSchema.js';
 import mongoose from 'mongoose';
+import { jest } from '@jest/globals';
 
 // Mock Mongoose methods
 jest.mock('./courseSchema.js');
 
 describe('Course Overview - Controller Tests', () => {
-  // Test for getAllCourses
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('getAllCourses', () => {
     test('should fetch paginated courses successfully', async () => {
-      // Arrange
       const mockCourses = [
         { title: 'Math 101', code: 'MATH101', description: 'Basic Math' },
         { title: 'History 101', code: 'HIST101', description: 'World History' },
@@ -25,51 +27,88 @@ describe('Course Overview - Controller Tests', () => {
 
       Course.countDocuments.mockResolvedValue(mockTotalCount);
 
-      const req = httpMocks.createRequest({
-        method: 'GET',
-        url: '/courses',
-        query: { page: 1, limit: 2, sortBy: 'title', sortOrder: 'asc' },
-      });
-      const res = httpMocks.createResponse();
+      const req = {
+        query: { page: 1, limit: 2, sortBy: 'title', sortOrder: 'asc' }
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
 
-      // Act
       await getAllCourses(req, res);
 
-      // Assert
-      const data = res._getJSONData();
-      expect(res.statusCode).toBe(200);
-      expect(data.totalCourses).toBe(mockTotalCount);
-      expect(data.totalPages).toBe(1);
-      expect(data.courses).toEqual(mockCourses);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        totalCourses: mockTotalCount,
+        totalPages: 1,
+        currentPage: 1,
+        courses: mockCourses,
+      });
     });
 
-    test('should handle server error gracefully', async () => {
-      // Arrange
+    test('should handle empty result set', async () => {
+      Course.find.mockImplementation(() => ({
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue([]),
+      }));
+
+      Course.countDocuments.mockResolvedValue(0);
+
+      const req = { query: {} };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+
+      await getAllCourses(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        totalCourses: 0,
+        totalPages: 0,
+        currentPage: 1,
+        courses: [],
+      });
+    });
+
+    test('should handle invalid instructor ID', async () => {
+      const req = {
+        query: { instructorId: 'invalid-id' }
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+
+      await getAllCourses(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid instructor ID format' });
+    });
+
+    test('should handle server error', async () => {
       Course.find.mockImplementation(() => {
         throw new Error('Database error');
       });
 
-      const req = httpMocks.createRequest({
-        method: 'GET',
-        url: '/courses',
-      });
-      const res = httpMocks.createResponse();
+      const req = { query: {} };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
 
-      // Act
       await getAllCourses(req, res);
 
-      // Assert
-      expect(res.statusCode).toBe(500);
-      expect(res._getJSONData()).toEqual({ error: 'Failed to fetch courses' });
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Failed to fetch courses' });
     });
   });
 
-  // Test for getCourseById
   describe('getCourseById', () => {
     test('should fetch a course by ID successfully', async () => {
-      // Arrange
       const mockCourse = {
-        _id: mongoose.Types.ObjectId(),
+        _id: new mongoose.Types.ObjectId(),
         title: 'Math 101',
         code: 'MATH101',
         description: 'Basic Math',
@@ -77,59 +116,69 @@ describe('Course Overview - Controller Tests', () => {
 
       Course.findById.mockResolvedValue(mockCourse);
 
-      const req = httpMocks.createRequest({
-        method: 'GET',
-        url: `/courses/${mockCourse._id}`,
-        params: { id: mockCourse._id },
-      });
-      const res = httpMocks.createResponse();
+      const req = {
+        params: { id: mockCourse._id }
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
 
-      // Act
       await getCourseById(req, res);
 
-      // Assert
-      expect(res.statusCode).toBe(200);
-      expect(res._getJSONData()).toEqual(mockCourse);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockCourse);
     });
 
     test('should return 404 if course is not found', async () => {
-      // Arrange
       Course.findById.mockResolvedValue(null);
 
-      const req = httpMocks.createRequest({
-        method: 'GET',
-        url: `/courses/invalid-id`,
-        params: { id: 'invalid-id' },
-      });
-      const res = httpMocks.createResponse();
+      const req = {
+        params: { id: new mongoose.Types.ObjectId() }
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
 
-      // Act
       await getCourseById(req, res);
 
-      // Assert
-      expect(res.statusCode).toBe(404);
-      expect(res._getJSONData()).toEqual({ error: 'Course not found' });
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: `Course with ID ${req.params.id} not found` });
     });
 
-    test('should handle server error gracefully', async () => {
-      // Arrange
+    test('should handle invalid course ID format', async () => {
+      const req = {
+        params: { id: 'invalid-id' }
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+
+      await getCourseById(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid course ID format' });
+    });
+
+    test('should handle server error', async () => {
       Course.findById.mockImplementation(() => {
         throw new Error('Database error');
       });
 
-      const req = httpMocks.createRequest({
-        method: 'GET',
-        url: `/courses/invalid-id`,
-        params: { id: 'invalid-id' },
-      });
-      const res = httpMocks.createResponse();
+      const req = {
+        params: { id: new mongoose.Types.ObjectId() }
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
 
-      // Act
       await getCourseById(req, res);
 
-      // Assert
-      expect(res.statusCode).toBe(500);
-      expect(res._getJSONData()).toEqual({ error: 'Failed to fetch course by ID' });
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Failed to fetch course by ID' });
     });
   });
 });
