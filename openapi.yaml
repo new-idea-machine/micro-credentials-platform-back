@@ -3,10 +3,10 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.4.1"
+  version: "0.8.0"
 
 servers:
-  - url: http://localhost:5001
+  - url: http://localhost/api:5001
     description: Local host
 
 paths:
@@ -17,11 +17,7 @@ paths:
       responses:
         "200":
           description: Server is running.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
   /auth:
@@ -43,11 +39,7 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           description: User not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     post:
@@ -73,13 +65,53 @@ paths:
                 $ref: "#/components/schemas/Credential"
         "403":
           description: User already exists.
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+  /auth/recovery:
+    get:
+      summary: Send an e-mail with a token for changing a user's password
+      description: >-
+        Send an e-mail with a single-use time-limited token that can be used to reset the password
+        associated with that e-mail address.  The e-mail address is encoded with Base64 and passed
+        as an HTTP Bearer authentication token.  For security reasons, no error responses are given
+        (except for database connectivity issues).
+      security:
+        - AuthHTTPBearer: []
+      responses:
+        "202":
+          description: >-
+            A message has been sent to the e-mail address provided.  If there is a registered user
+            with this e-mail address then the message will include a single-use time-limited token
+            plus further instructions on how to use that token to create a new password; otherwise,
+            the message will inform the recipient that there's no registered user with this e-mail
+            address.
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    patch:
+      summary: Change a user's password and log in.
+      description: >-
+        Change a user's password.  The "userId" part of HTTP Basic authentication is the access
+        token that was sent to the user via this path's GET method, and the "password" part is the
+        new password.  If successful then the user's password is changed and the user is logged in
+        (the token in the response body is the bearer token that represents the user).
+      security:
+        - AuthHTTPBasic: []
+      responses:
+        "200":
+          description: The password has been changed and the user is now logged in.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "406":
           $ref: "#/components/responses/InvalidData"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
   /user:
@@ -97,7 +129,7 @@ paths:
                 $ref: "#/components/schemas/UserData"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     patch:
@@ -118,12 +150,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ServerMessage"
+                $ref: "#/components/schemas/UserData"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "406":
           $ref: "#/components/responses/InvalidData"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     delete:
@@ -136,13 +168,9 @@ paths:
       responses:
         "200":
           description: User successfully deleted.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ServerMessage"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "503":
+        "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
 components:
@@ -157,22 +185,10 @@ components:
   responses:
     CantConnectToDatabase:
       description: Can"t connect to database.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ServerMessage"
     InvalidData:
       description: Invalid data.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ServerMessage"
     Unauthorized:
       description: Not authorized.
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ServerMessage"
 
   schemas:
     RegistrationInfo:
@@ -183,7 +199,7 @@ components:
         isInstructor:
           type: boolean
       required:
-        - password
+        - name
         - isInstructor
 
     Credential:
@@ -217,25 +233,161 @@ components:
           nullable: true
         learnerData:
           $ref: "#/components/schemas/LearnerData"
+          nullable: true
         instructorData:
           $ref: "#/components/schemas/InstructorData"
+          nullable: true
       required:
         - name
         - email
-        - learnerInfo
+        - learnerData
 
     LearnerData:
-      type: object
-      nullable: true
+      type: array
+      items:
+        $ref: "#/components/schemas/Course"
 
     InstructorData:
-      type: object
-      nullable: true
+      type: array
+      items:
+        $ref: "#/components/schemas/Course"
 
-    ServerMessage:
+    Course:
       type: object
       properties:
-        msg:
+        UID:
           type: string
+        title:
+          type: string
+        description:
+          type: string
+        instructor:
+          type: string
+        components:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/Module"
+              - $ref: "#/components/schemas/Assessment"
+        currentComponent:
+          type: integer
+        creationTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
       required:
-        - msg
+        - UID
+        - title
+        - description
+        - components
+        - instructorID
+        - creationTime
+        - updateTime
+
+    Module:
+      type: object
+      properties:
+        UID:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum:
+            - "Audio"
+            - "Video"
+            - "Markdown"
+        chapters:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: number
+        url:
+          type: string
+        urlAuthentication:
+          type: object
+          properties:
+            scheme:
+              type: string
+            parameters:
+              type: string
+          required:
+            - scheme
+            - parameters
+        creationTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+      required:
+        - UID
+        - title
+        - description
+        - type
+        - url
+        - creationTime
+        - updateTime
+
+    Assessment:
+      type: object
+      properties:
+        UID:
+          type: string
+        title:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        currentQuestion:
+          type: integer
+        creationTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+      required:
+        - UID
+        - title
+        - questions
+        - creationTime
+        - updateTime
+
+    Question:
+      type: object
+      properties:
+        UID:
+          type: string
+        question:
+          type: string
+        choices:
+          type: array
+          items:
+            type: string
+        answer:
+          type: integer
+        correctChoice:
+          type: integer
+        explanation:
+          type: string
+        creationTime:
+          type: string
+          format: date-time
+        updateTime:
+          type: string
+          format: date-time
+      required:
+        - UID
+        - question
+        - choices
+        - correctChoice
+        - explanation
+        - creationTime
+        - updateTime
