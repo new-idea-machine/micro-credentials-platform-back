@@ -70,55 +70,67 @@ function removeExpiredTokens() {
   });
 }
 
-/*
-Extract authorization data from an Express.js "Request" object and add it as members to that
-object.  If no recognized authorization data is found then no changes are made.
-
-Authorization data is found in the request object's "Authorization" header.  The actual members
-that will be added to that object depend on the type of authorization.
-
-+--------+------+-------------+
-| Scheme | RFC  | Members     |
-+========+======+=============+
-| Basic  | 7617 | userId      |
-|        |      | password    |
-+--------+------+-------------+
-| Bearer | 6750 | bearerToken |
-|        |      | userUid*    |
-+--------+------+-------------+
-
-* For Bearer tokens, if the token corresponds to a user that's already logged in then "userUid"
-will be set to that user -- otherwise, "userUid" will not be present.
-*/
+/**
+ * Extract authorization data from an Express.js `Request` object and add it as members to that
+ * object.  If no recognized authorization data is found then no changes are made.
+ *
+ * Authorization data is found in the request object's `Authorization` header.  The actual members
+ * that will be added to that object depend on the type of authorization.
+ *
+ * | Scheme | RFC  | Members     |
+ * |--------|------|-------------|
+ * | Basic  | 7617 | userId      |
+ * |        |      | password    |
+ * | Bearer | 6750 | bearerToken |
+ * |        |      | userUid*    |
+ *
+ * \* For Bearer tokens, if the token corresponds to a user that's already logged in then `userUid`
+ * will be set for that user -- otherwise, `userUid` will not be present.
+ *
+ * @param {Object} req - Express.js Request object
+ * @param {Object} res - Express.js Response object
+ * @param {Function} next - Express.js next() middleware function
+ */
 function authenticationMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
-  if (authHeader) {
-    const authHeaderFormat = /^(?<scheme>\S+) +(?<parameters>\S+)$/;
-    const authorization = authHeaderFormat.exec(authHeader)?.groups;
 
-    if (authorization?.scheme === "Basic") {
+  if (authHeader) {
+    /*
+    Authorization header credentials are in the format "<scheme> <parameters>".  The format of
+    "parameters" depends on the authorization scheme.
+
+    See RFC 9110 section 11.4 for a more detailed description.
+    */
+
+    const authCredentialsFormat = /^(?<scheme>\S+) +(?<parameters>\S+)$/;
+    const authCredentials = authCredentialsFormat.exec(authHeader)?.groups;
+
+    if (authCredentials?.scheme === "Basic") {
       /*
-      With HTTP Basic authorization, the credentials are in the format "<userId>:<password>" but
+      With HTTP Basic authorization, the parameters are in the format "<userId>:<password>" but
       encoded in Base64 (see RFC 7617 section 2 for a more detailed description).
       */
 
-      const basicAuthCredentialsFormat = /^(?<userId>[^:]*):(?<password>.*)$/;
-      const credentialsText = Buffer.from(authorization.parameters, "base64").toString();
-      const credentials = basicAuthCredentialsFormat.exec(credentialsText)?.groups;
+      const decodedParameters = Buffer.from(authCredentials.parameters, "base64").toString();
+      const basicAuthParametersFormat = /^(?<userId>[^:]*):(?<password>.*)$/;
+      const basicAuthParameters = basicAuthParametersFormat.exec(decodedParameters)?.groups;
 
-      if (credentials) {
-        req.userId = credentials.userId;
-        req.password = credentials.password;
+      if (basicAuthParameters) {
+        req.userId = basicAuthParameters.userId;
+        req.password = basicAuthParameters.password;
       }
-    } else if (authorization?.scheme === "Bearer") {
+    } else if (authCredentials?.scheme === "Bearer") {
       /*
-      With HTTP Bearer authorization, the token is sent as-is without encoding (see RFC 6750
+      With HTTP Bearer authorization, the bearer token is sent as-is without encoding (see RFC 6750
       section 2 for a more detailed description).
-     */
+      */
 
-      const bearerToken = authorization.parameters;
+      const bearerToken = authCredentials.parameters;
+
       req.bearerToken = bearerToken;
+
       removeExpiredTokens();
+
       try {
         const decodedToken = JWT.verify(bearerToken, secretKey);
         const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
@@ -129,6 +141,7 @@ function authenticationMiddleware(req, res, next) {
       } catch (error) {}
     }
   }
+
   next();
 }
 
