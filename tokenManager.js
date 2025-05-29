@@ -85,7 +85,7 @@ function removeExpiredTokens() {
  * |        |      | userUid*    |
  *
  * \* For Bearer tokens, if the token corresponds to a user that's already logged in then `userUid`
- * will be set for that user -- otherwise, `userUid` will not be present.
+ * will be set for that user -- otherwise, `userUid` will be `null`.
  *
  * @param {Object} req - Express.js Request object
  * @param {Object} res - Express.js Response object
@@ -128,17 +128,7 @@ function authenticationMiddleware(req, res, next) {
       const bearerToken = authCredentials.parameters;
 
       req.bearerToken = bearerToken;
-
-      removeExpiredTokens();
-
-      try {
-        const decodedToken = JWT.verify(bearerToken, secretKey);
-        const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
-        if (entry) {
-          entry.lastAccessed = new Date();
-          req.userUid = entry.userUid;
-        }
-      } catch (error) {}
+      req.userUid = getUserUid(bearerToken);
     }
   }
 
