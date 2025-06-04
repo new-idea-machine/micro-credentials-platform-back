@@ -9,7 +9,21 @@ if (!secretKey) {
 
 let loggedInUsers = [];
 
-function generateToken(userUid) {
+/**
+ * Generate a JSON web token for a user.
+ *
+ * This function creates a random token string, signs it using JWT, and stores it in the
+ * `loggedInUsers` array along with the user's UID and the current time.  The returned JWT token
+ * can then be passed on to the user for future authentication.
+ *
+ * @param {string} userUid - The user identifier to associate with the token
+ * @param {string} [timeLimit="1h"] - The expiration time for the token (must be a value compatible
+ *   with the 'expiresIn' option for the `jwt.sign()` function (e.g., 60, "60s", "60m", "1h", "2d")
+ *   -- see https://www.npmjs.com/package/jsonwebtoken?activeTab=readme#token-expiration-exp-claim
+ *   for details)
+ * @returns {string} A signed JWT token
+ */
+function generateToken(userUid, timeLimit = "1h") {
   removeExpiredTokens();
   const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890+/";
   const tokenLength = 40;
@@ -23,7 +37,7 @@ function generateToken(userUid) {
   } while (loggedInUsers.some((entry) => entry.token === token));
 
   const jwtPayload = { token };
-  const signedToken = JWT.sign(jwtPayload, secretKey, { expiresIn: "1h" });
+  const signedToken = JWT.sign(jwtPayload, secretKey, { expiresIn: timeLimit });
   loggedInUsers.push({ token, userUid, lastAccessed: new Date() });
 
   return signedToken;
