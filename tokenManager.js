@@ -17,14 +17,13 @@ let loggedInUsers = [];
  * can then be passed on to the user for future authentication.
  *
  * @param {string} userUid - The user identifier to associate with the token
- * @param {string} [timeLimit="1h"] - The expiration time for the token (must be a value compatible
- *   with the 'expiresIn' option for the `jwt.sign()` function (e.g., 60, "60s", "60m", "1h", "2d")
- *   -- see https://www.npmjs.com/package/jsonwebtoken?activeTab=readme#token-expiration-exp-claim
- *   for details)
+ * @param {string} [timeLimit=60] - How long the user can be idle before being automatically logged
+ *   out (in minutes)
  * @returns {string} A signed JWT token
  */
-function generateToken(userUid, timeLimit = "1h") {
+function generateToken(userUid, timeLimit = 60) {
   removeExpiredTokens();
+  const millisecondsPerMinute = 60000;
   const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890+/";
   const tokenLength = 40;
   let token = "";
@@ -36,9 +35,14 @@ function generateToken(userUid, timeLimit = "1h") {
     }
   } while (loggedInUsers.some((entry) => entry.token === token));
 
-  const jwtPayload = { token };
-  const signedToken = JWT.sign(jwtPayload, secretKey, { expiresIn: timeLimit });
-  loggedInUsers.push({ token, userUid, lastAccessed: new Date() });
+  // const jwtPayload = { token };
+  const signedToken = JWT.sign(token, secretKey);
+  loggedInUsers.push({
+    token,
+    userUid,
+    timeLimit: timeLimit * millisecondsPerMinute,
+    lastAccessed: new Date(),
+  });
 
   return signedToken;
 }
@@ -47,7 +51,7 @@ function getUserUid(signedToken) {
   removeExpiredTokens();
   try {
     const decodedToken = JWT.verify(signedToken, secretKey);
-    const entry = loggedInUsers.find((entry) => entry.token === decodedToken.token);
+    const entry = loggedInUsers.find((entry) => entry.token === decodedToken);
     if (entry) {
       entry.lastAccessed = new Date();
       return entry.userUid;
@@ -63,7 +67,7 @@ function logout(signedToken) {
   try {
     const decodedToken = JWT.verify(signedToken, secretKey);
     const initialLength = loggedInUsers.length;
-    loggedInUsers = loggedInUsers.filter((entry) => entry.token !== decodedToken.token);
+    loggedInUsers = loggedInUsers.filter((entry) => entry.token !== decodedToken);
     return loggedInUsers.length < initialLength;
   } catch (error) {
     return false;
@@ -71,16 +75,10 @@ function logout(signedToken) {
 }
 
 function removeExpiredTokens() {
+  const currentTime = new Date().getTime();
+
   loggedInUsers = loggedInUsers.filter((entry) => {
-    try {
-      JWT.verify(entry.token, secretKey);
-      return true;
-    } catch (error) {
-      if (error.name === "TokenExpiredError") {
-        return false;
-      }
-      return true;
-    }
+    return currentTime - entry.lastAccessed.getTime() < entry.timeLimit;
   });
 }
 
