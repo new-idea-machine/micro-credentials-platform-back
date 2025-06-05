@@ -16,45 +16,44 @@ let loggedInUsers = [];
  * `loggedInUsers` array along with the user's UID and the current time.  The returned JWT token
  * can then be passed on to the user for future authentication.
  *
- * @param {string} userUid - The user identifier to associate with the token
- * @param {string} [timeLimit=60] - How long the user can be idle before being automatically logged
- *   out (in minutes)
+ * @param {string} userUid - The user identifier to associate with the web token
+ * @param {string} [timeLimit=60] - How long (in minutes) the user can be idle before being
+ *   automatically logged out
  * @returns {string} A signed JWT token
  */
 function generateToken(userUid, timeLimit = 60) {
   removeExpiredTokens();
   const millisecondsPerMinute = 60000;
   const charString = "ABCDEFGHIJKLMNOPQRSTUVWXYZzyxwvutsrqponmlkjihgfedcba1234567890+/";
-  const tokenLength = 40;
-  let token = "";
+  const sessionIdLength = 40;
+  let sessionId = "";
 
   do {
-    token = "";
-    for (let i = 0; i < tokenLength; i++) {
-      token += charString.charAt(Math.floor(Math.random() * charString.length));
+    sessionId = "";
+    for (let i = 0; i < sessionIdLength; i++) {
+      sessionId += charString.charAt(Math.floor(Math.random() * charString.length));
     }
-  } while (loggedInUsers.some((entry) => entry.token === token));
+  } while (loggedInUsers.some((session) => session.sessionId === sessionId));
 
-  // const jwtPayload = { token };
-  const signedToken = JWT.sign(token, secretKey);
+  const webToken = JWT.sign(sessionId, secretKey);
   loggedInUsers.push({
-    token,
+    sessionId,
     userUid,
     timeLimit: timeLimit * millisecondsPerMinute,
     lastAccessed: new Date(),
   });
 
-  return signedToken;
+  return webToken;
 }
 
-function getUserUid(signedToken) {
+function getUserUid(webToken) {
   removeExpiredTokens();
   try {
-    const decodedToken = JWT.verify(signedToken, secretKey);
-    const entry = loggedInUsers.find((entry) => entry.token === decodedToken);
-    if (entry) {
-      entry.lastAccessed = new Date();
-      return entry.userUid;
+    const sessionId = JWT.verify(webToken, secretKey);
+    const session = loggedInUsers.find((entry) => entry.sessionId === sessionId);
+    if (session) {
+      session.lastAccessed = new Date();
+      return session.userUid;
     }
     return null;
   } catch (error) {
@@ -62,13 +61,13 @@ function getUserUid(signedToken) {
   }
 }
 
-function logout(signedToken) {
+function logout(webToken) {
   removeExpiredTokens();
   try {
-    const decodedToken = JWT.verify(signedToken, secretKey);
-    const initialLength = loggedInUsers.length;
-    loggedInUsers = loggedInUsers.filter((entry) => entry.token !== decodedToken);
-    return loggedInUsers.length < initialLength;
+    const sessionId = JWT.verify(webToken, secretKey);
+    const initialNumLoggedInUsers = loggedInUsers.length;
+    loggedInUsers = loggedInUsers.filter((session) => session.sessionId !== sessionId);
+    return loggedInUsers.length < initialNumLoggedInUsers;
   } catch (error) {
     return false;
   }
@@ -77,8 +76,8 @@ function logout(signedToken) {
 function removeExpiredTokens() {
   const currentTime = new Date().getTime();
 
-  loggedInUsers = loggedInUsers.filter((entry) => {
-    return currentTime - entry.lastAccessed.getTime() < entry.timeLimit;
+  loggedInUsers = loggedInUsers.filter((session) => {
+    return currentTime - session.lastAccessed.getTime() < session.timeLimit;
   });
 }
 
