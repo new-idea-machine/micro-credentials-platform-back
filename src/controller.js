@@ -10,7 +10,7 @@
 import validator from "validator";
 import multer from "multer";
 import { database, userModel } from "./model.js";
-import { generateToken, getUserUid } from "../tokenManager.js";
+import { generateToken } from "../tokenManager.js";
 import * as service from "./service.js";
 import * as googleDrive from "./googleDrive.js";
 
@@ -44,7 +44,7 @@ async function get(req, res) {
     res.status(401).send();
   } else {
     try {
-      const user = await userModel.findOne({ email: getUserUid(req.userUid) }).lean();
+      const user = await userModel.findOne({ email: req.userUid }).lean();
       if (!user) {
         res.status(404).send();
       } else {
@@ -173,7 +173,7 @@ async function update(req, res) {
   } else {
     try {
       const user = await userModel
-        .findOneAndUpdate({ email: getUserUid(req.userUid) }, req.body)
+        .findOneAndUpdate({ email: req.userUid }, req.body)
         .lean();
       if (!user) {
         res.status(406).send();
@@ -205,7 +205,7 @@ async function removeOne(req, res) {
     res.status(401).send();
   } else {
     try {
-      await userModel.findOneAndDelete({ email: getUserUid(req.userUid) });
+      await userModel.findOneAndDelete({ email: req.userUid });
       res.status(200).send();
     } catch {
       res.status(504).send();
