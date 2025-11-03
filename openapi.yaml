@@ -173,6 +173,119 @@ paths:
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
+  /courses:
+    get:
+      summary: Get all available courses
+      description: >-
+        Returns all courses available for registration.  The courses do not contain any components
+        (i.e. modules or assessments) and are therefore suitable for public promotion.
+      responses:
+        "200":
+          description: List of available courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    post:
+      summary: Create a new course
+      description: >-
+        Create a new course.  Only instructors can create courses.  The "UID" field must be an
+        empty string, and the "instructor" field must be the same as the authenticated user.  If
+        successful, the user's database document is automatically updated to include the new
+        course.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: Details of the course to be created
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "201":
+          description: Course successfully created
+          content:
+            text/plain:
+              schema:
+                type:  string
+                description:  Course UID
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: User is not an instructor
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+  /courses/{courseId}:
+    patch:
+      summary: Update a specific course
+      description: >-
+        Update details of a specific course.  Only the instructor who created the course can update
+        it.
+      security:
+        - AuthHTTPBearer: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: Unique identifier of the course
+          schema:
+            type: string
+      requestBody:
+        description: Updated course details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "200":
+          description: Course successfully updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: User is not the instructor of this course
+        "404":
+          description: Course not found
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    delete:
+      summary: Delete a specific course
+      description: >-
+        Delete a specific course.  Only the instructor who created the course can delete it.
+        This will not remove the course from any enrolled learners.
+      security:
+        - AuthHTTPBearer: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: Unique identifier of the course
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Course successfully deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: User is not the instructor of this course
+        "404":
+          description: Course not found
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
 components:
   securitySchemes:
     AuthHTTPBasic:
@@ -282,7 +395,7 @@ components:
         - title
         - description
         - components
-        - instructorID
+        - instructor
         - creationTime
         - updateTime
 
