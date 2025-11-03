@@ -286,6 +286,97 @@ paths:
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
+  /files:
+    post:
+      summary: Upload multiple files
+      description: >-
+        Upload one or more files.  Only instructors can upload files.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: Files to be uploaded
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+                - files
+      responses:
+        "201":
+          description: Files successfully uploaded (maybe)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Array of URL's of uploaded files (corresponding to the file names in the
+                  request).  If any file fails to upload then its URL will be null.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    patch:
+      summary: Update multiple existing files
+      description: >-
+        Replace one or more existing files.  Each file must include its URL to identify which file
+        to replace.  Only instructors can update files, and they can only update their own files.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: Files to be updated with their corresponding file URL's
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                fileURLs:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    Array of existing file URL's (corresponding to each file being updated)
+              required:
+                - files
+                - fileURLs
+      responses:
+        "200":
+          description: Files successfully updated (maybe)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Array of URL's of updated files (corresponding to the files in the request).  If
+                  any file couldn't be updated then its URL will be null.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: One or more files not found
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
 components:
   securitySchemes:
     AuthHTTPBasic:
@@ -480,10 +571,12 @@ components:
           type: string
         question:
           type: string
-        choices:
+        options:
           type: array
           items:
             type: string
+          minItems: 2
+          maxItems: 26
         answer:
           type: integer
         correctChoice:
@@ -499,7 +592,7 @@ components:
       required:
         - UID
         - question
-        - choices
+        - options
         - correctChoice
         - explanation
         - creationTime
