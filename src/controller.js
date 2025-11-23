@@ -87,7 +87,7 @@ async function getAuth(req, res) {
         res.setHeader("WWW-Authenticate", 'Basic realm="user"');
         res.status(401).send();
       } else {
-        const access_token = generateToken(req.userId);
+        const access_token = generateToken(user._id.toString());
         res.status(200).json({
           access_token,
           token_type: "Bearer",
@@ -134,7 +134,7 @@ async function create(req, res) {
     });
     try {
       const newDocument = await registrant.save();
-      const access_token = generateToken(req.userId);
+      const access_token = generateToken(newDocument._id.toString());
       res.status(201).json({
         access_token,
         token_type: "Bearer",
