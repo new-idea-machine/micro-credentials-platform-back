@@ -233,7 +233,7 @@ async function createFile(req, res) {
     try {
       //Call processFiles to handle the uploaded files
 
-      const savedFiles = await service.createFile(req.files);
+      const savedFiles = await service.createFile(req.userUid, req.files);
 
       //Respond with the saved file metadata
       res.status(200).json(savedFiles);

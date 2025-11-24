@@ -31,7 +31,7 @@ router.delete("/user", removeOne);
 router.get("/files", getAllFiles);
 
 //For demoing purpose only and does not represent the final product
-router.post("/files/upload", createFile);
+router.post("/files", createFile);
 
 //For demoing purpose only and does not represent the final product
 //router.patch("/files/:fileID", updateFile);

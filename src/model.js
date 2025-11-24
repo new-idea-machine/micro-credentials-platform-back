@@ -307,14 +307,14 @@ const courseSchema = new mongoose.Schema({
  * @property {string} driveId - The unique identifier for the file on Google Drive.
  * @property {string} mimeType - The file's type (important for determining how the file should be
  *                               handled or rendered).
- * @property {string} webViewLink - An URL to access or view the file directly on Google Drive.
+ * @property {string} webContentLink - An URL to access the file directly on Google Drive.
  */
 const fileSchema = new mongoose.Schema(
   {
     filename: { type: String, required: true },
     driveId: { type: String, required: true },
     mimeType: { type: String, required: true },
-    webViewLink: { type: String, required: true }
+    webContentLink: { type: String, required: true }
   },
   { timestamps: true }
 );

@@ -35,18 +35,18 @@ async function removeOne() {
 
 //For demoing purpose only and does not represent the final product
 //Function to handle the complete process of uploading files and saving metadata
-async function createFile(files) {
+async function createFile(userUid, files) {
   const savedFiles = [];
 
   for (const file of files) {
-    const uploadedFile = await uploadFileToGoogleDrive(file);
+    const uploadedFile = await uploadFileToGoogleDrive(userUid, file);
 
     //Save file metadata to MongoDB
     const savedFile = await fileModel.create({
       filename: uploadedFile.name,
       driveId: uploadedFile.id,
       mimeType: uploadedFile.mimeType,
-      webViewLink: uploadedFile.webViewLink
+      webContentLink: uploadedFile.webContentLink
     });
 
     //Store the saved file metadata
