@@ -78,6 +78,7 @@ async function getAuth(req, res) {
       const user = await userModel.findOne({ email: req.userId }).lean();
       if (!user) {
         res.status(404).send();
+        return;
       }
       // Compares the provided password with the stored hashed password
       const userRecord = await userModel.findById(user._id);
@@ -223,30 +224,69 @@ async function getAllFiles(req, res) {
   }
 }
 
-//For demoing purpose only and does not represent the final product
-async function createFile(req, res) {
-  await upload.array("files")(req, res, async function (err) {
-    if (err) {
-      return res.status(400).send({ message: `File upload failed. ${err}` });
+/**
+ * Upload multiple files to Google Drive
+ *
+ * @see "paths:/files:post" in "/openapi.yaml" for details.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function uploadFiles(req, res) {
+  if (!("userUid" in req)) {
+    res.setHeader("WWW-Authenticate", 'Bearer realm="user"');
+    res.status(401).send();
+    return;
+  }
+
+  try {
+    /*
+    First, the user is checked to ensure that they're an instructor.  Only instructors can upload
+    files.
+    */
+
+    const user = await userModel.findById(req.userUid).lean();
+
+    if (!user) {
+      res.status(401).send();
+      return;
     }
 
-    try {
-      //Call processFiles to handle the uploaded files
-
-      const savedFiles = await service.createFile(req.userUid, req.files);
-
-      //Respond with the saved file metadata
-      res.status(200).json(savedFiles);
-    } catch (err) {
-      res.status(500).send({ message: err.message });
+    if (!user.instructorData) {
+      res.status(403).send();
+      return;
     }
-  });
+
+    /*
+    Next, Multer is used to process the incoming files, then the files are all transferred to the
+    file server and their URL's are returned.  If no files were found in the request or if there
+    was an error transferring the files then an appropriate result code is sent back.
+    */
+
+    await upload.array("files")(req, res, async function (err) {
+      if (err) {
+        res.status(406).send();
+        return;
+      }
+
+      if ((req?.files?.length === undefined) || (req.files.length === 0)) {
+        return res.status(406).send();
+      }
+
+      try {
+        const fileUrls = await service.uploadFiles(req.userUid, req.files);
+
+        res.status(201).json(fileUrls);
+      } catch (error) {
+        console.error("Error uploading files:", error);
+        res.status(504).send();
+      }
+    });
+  } catch (error) {
+    console.error("Error uploading files:", error);
+    res.status(504).send();
+  }
 }
-
-//For demoing purpose only and does not represent the final product
-// async function updateFile(req, res) {
-//   service.updateFile(req, res);
-// }
 
 //For demoing purpose only and does not represent the final product
 async function deleteFile(req, res) {
@@ -289,7 +329,7 @@ export {
   update,
   getAuth,
   getAllFiles,
-  createFile,
+  uploadFiles,
   // updateFile,
   deleteFile,
   accessGoogleDriveFiles
