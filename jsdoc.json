@@ -1,0 +1,33 @@
+{
+  "plugins": ["plugins/markdown"],
+  "opts": {
+    "template": "node_modules/docdash",
+    "destination": "./docs",
+    "recurse": true,
+    "verbose": true
+  },
+  "source": {
+    "includePattern": ".+\\.js(doc|x)?$",
+    "excludePattern": "(^|\\/|\\\\)_"
+  },
+  "docdash": {
+    "search": true,
+    "sectionOrder": [
+      "Modules",
+      "Classes",
+      "Global",
+      "Externals",
+      "Events",
+      "Namespaces",
+      "Tutorials",
+      "Interfaces"
+    ],
+    "sort": true,
+    "private": false,
+    "wrap": true
+  },
+  "tags": {
+    "allowUnknownTags": true,
+    "dictionaries": ["jsdoc", "closure"]
+  }
+}

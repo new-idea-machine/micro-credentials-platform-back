@@ -3,7 +3,7 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.7.0"
+  version: "0.8.0"
 
 servers:
   - url: http://localhost/api:5001
@@ -74,54 +74,32 @@ paths:
     get:
       summary: Send an e-mail with a token for changing a user's password
       description: >-
-        Send an e-mail with a single-use time-limited token that can be used to reset the
-        password associated with that e-mail address.  The e-mail address is encoded with
-        Base64 and passed as an HTTP Bearer authentication token.  For security reasons, no
-        error responses are given (except for database connectivity issues).
+        Send an e-mail with a single-use time-limited token that can be used to reset the password
+        associated with that e-mail address.  The e-mail address is encoded with Base64 and passed
+        as an HTTP Bearer authentication token.  For security reasons, no error responses are given
+        (except for database connectivity issues).
       security:
         - AuthHTTPBearer: []
       responses:
         "202":
           description: >-
-            A message has been sent to the e-mail address provided.  This message will include
-            a single-use time-limited token that will allow the user to set a new password for
-            their account.  The body of the response contains another single-use time-limited
-            token that's to be passed as the "userId" part of an HTTP Basic authentication
-            header (see this path's PATCH method).
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  userIdToken:
-                    type: string
-                required:
-                  - userIdToken
+            A message has been sent to the e-mail address provided.  If there is a registered user
+            with this e-mail address then the message will include a single-use time-limited token
+            plus further instructions on how to use that token to create a new password; otherwise,
+            the message will inform the recipient that there's no registered user with this e-mail
+            address.
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
     patch:
       summary: Change a user's password and log in.
       description: >-
-        Change a user's password.  Set the "userId" part of HTTP Basic authentication to the
-        token that was previously returned by this path's GET method, and set the "password"
-        part to the token that was e-mailed to the user.  If successful then the user's
-        password is changed and the user is logged in (the token in the response body is the
-        bearer token that represents the user).
+        Change a user's password.  The "userId" part of HTTP Basic authentication is the access
+        token that was sent to the user via this path's GET method, and the "password" part is the
+        new password.  If successful then the user's password is changed and the user is logged in
+        (the token in the response body is the bearer token that represents the user).
       security:
         - AuthHTTPBasic: []
-      requestBody:
-        description: The new password.
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                password:
-                  type: string
-              required:
-                - password
       responses:
         "200":
           description: The password has been changed and the user is now logged in.
@@ -371,6 +349,210 @@ paths:
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
+  /courses:
+    get:
+      summary: Get all available courses
+      description: >-
+        Returns all courses available for registration.  The courses do not contain any components
+        (i.e. modules or assessments) and are therefore suitable for public promotion.
+      responses:
+        "200":
+          description: List of available courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Course"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    post:
+      summary: Create a new course
+      description: >-
+        Create a new course.  Only instructors can create courses.  The "UID" field must be an
+        empty string, and the "instructor" field must be the same as the authenticated user.  If
+        successful, the user's database document is automatically updated to include the new
+        course.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: Details of the course to be created
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "201":
+          description: Course successfully created
+          content:
+            text/plain:
+              schema:
+                type:  string
+                description:  Course UID
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: User is not an instructor
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+  /courses/{courseId}:
+    patch:
+      summary: Update a specific course
+      description: >-
+        Update details of a specific course.  Only the instructor who created the course can update
+        it.
+      security:
+        - AuthHTTPBearer: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: Unique identifier of the course
+          schema:
+            type: string
+      requestBody:
+        description: Updated course details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Course"
+      responses:
+        "200":
+          description: Course successfully updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: User is not the instructor of this course
+        "404":
+          description: Course not found
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    delete:
+      summary: Delete a specific course
+      description: >-
+        Delete a specific course.  Only the instructor who created the course can delete it.
+        This will not remove the course from any enrolled learners.
+      security:
+        - AuthHTTPBearer: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: Unique identifier of the course
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Course successfully deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: User is not the instructor of this course
+        "404":
+          description: Course not found
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+  /files:
+    post:
+      summary: Upload multiple files
+      description: >-
+        Upload one or more files.  Only instructors can upload files.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: Files to be uploaded
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+                - files
+      responses:
+        "201":
+          description: Files successfully uploaded (maybe)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Array of URL's of uploaded files (corresponding to the file names in the
+                  request).  If any file fails to upload then its URL will be null.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
+    patch:
+      summary: Update multiple existing files
+      description: >-
+        Replace one or more existing files.  Each file must include its URL to identify which file
+        to replace.  Only instructors can update files, and they can only update their own files.
+      security:
+        - AuthHTTPBearer: []
+      requestBody:
+        description: Files to be updated with their corresponding file URL's
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                fileURLs:
+                  type: array
+                  items:
+                    type: string
+                  description: >-
+                    Array of existing file URL's (corresponding to each file being updated)
+              required:
+                - files
+                - fileURLs
+      responses:
+        "200":
+          description: Files successfully updated (maybe)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                description: >-
+                  Array of URL's of updated files (corresponding to the files in the request).  If
+                  any file couldn't be updated then its URL will be null.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: One or more files not found
+        "406":
+          $ref: "#/components/responses/InvalidData"
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
 components:
   securitySchemes:
     AuthHTTPBasic:
@@ -480,7 +662,7 @@ components:
         - title
         - description
         - components
-        - instructorID
+        - instructor
         - creationTime
         - updateTime
 
@@ -565,10 +747,12 @@ components:
           type: string
         question:
           type: string
-        choices:
+        options:
           type: array
           items:
             type: string
+          minItems: 2
+          maxItems: 26
         answer:
           type: integer
         correctChoice:
@@ -584,7 +768,7 @@ components:
       required:
         - UID
         - question
-        - choices
+        - options
         - correctChoice
         - explanation
         - creationTime

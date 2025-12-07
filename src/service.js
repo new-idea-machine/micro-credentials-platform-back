@@ -1,7 +1,6 @@
-// import { userModel, learnerModel, instructorModel } from "./Models/model.js";
-import { userModel } from "./Models/UserModel.js";
-// import { learnerDataModel } from "./Models/LearnerDataModel.js";
-// import { instructorDataModel } from "./Models/InstructorDataModel.js";
+import fs from "fs";
+import { userModel, learnerSchema, instructorSchema, fileModel } from "./model.js";
+import { uploadFileToGoogleDrive, deleteFileFromGoogleDrive } from "./googleDrive.js";
 
 async function getAll() {
   const users = await userModel.find();
@@ -18,8 +17,8 @@ async function create(user) {
     username: user.userInfo.name,
     email: user.userInfo.email,
     password: user.password,
-    learnerData: {},
-    instructorData: user.isInstructor ? {} : null
+    learnerData: new learnerSchema({}),
+    instructorData: user.isInstructor ? new instructorSchema({}) : null
   });
   const newDocument = await registrant.save();
   return { userUID: newDocument._id };
@@ -34,45 +33,78 @@ async function removeOne() {
   await userModel.deleteMany({});
 }
 
-function getAuthorizationData(request) {
-  /*
-  Extract authorization data from an Express.js "Request" object and return an object
-  containing this data.  If no recognized authorization data is found then return "null".
+//For demoing purpose only and does not represent the final product
+//Function to handle the complete process of uploading files and saving metadata
+async function createFile(files) {
+  const savedFiles = [];
 
-  Authorization data is found in the request's "Authorization" header.  The actual members of
-  the returned object will depend on the type of authorization in the request.
+  for (const file of files) {
+    const uploadedFile = await uploadFileToGoogleDrive(file);
 
-  +--------+------+----------+
-  | Scheme | RFC  | Members  |
-  +========+======+==========+
-  | Basic  | 7617 | userId   |
-  |        |      | password |
-  +--------+------+----------+
-  | Bearer | 6750 | token    |
-  +--------+------+----------+
-  */
+    //Save file metadata to MongoDB
+    const savedFile = await fileModel.create({
+      filename: uploadedFile.name,
+      driveId: uploadedFile.id,
+      mimeType: uploadedFile.mimeType,
+      webViewLink: uploadedFile.webViewLink
+    });
 
-  const authorizationValue = request.header("Authorization");
-  const authorization = /^(?<scheme>\S+) (?<parameters>\S+)$/i.exec(authorizationValue)?.groups;
+    //Store the saved file metadata
+    savedFiles.push(savedFile);
 
-  if (authorization?.scheme === "Basic") {
-    /*
-    With HTTP Basic authorization, the credentials are in the format "<userId>:<password>" but
-    encoded in Base64 (see RFC 7617 section 2 for a more detailed description).
-    */
+    //Delete the file from the server after uploading
+    fs.unlinkSync(file.path);
+  }
 
-    const credentialsText = Buffer.from(authorization.parameters, "base64");
-    const credentials = /^(?<userId>[^:]*):(?<password>.*)$/i.exec(credentialsText)?.groups;
-
-    return credentials ? { userId: credentials.userId, password: credentials.password } : null;
-  } else if (authorization?.scheme === "Bearer") {
-    /*
-    With HTTP Bearer authorization, the token is encoded in Base64 (see RFC 6750 section 2 for
-    a more detailed description).
-    */
-
-    return { token: Buffer.from(authorization.parameters, "base64") };
-  } else return null;
+  return savedFiles;
 }
 
-export { getAll, get, create, updatePassword, removeOne, getAuthorizationData };
+//For demoing purpose only and does not represent the final product
+async function deleteFile(fileID) {
+  //Delete file from Google Drive
+  const file = await fileModel.findById(fileID);
+
+  if (!file) throw new Error("File not found in MongoDB");
+
+  await deleteFileFromGoogleDrive(file.driveId);
+
+  //Delete the file metadata from MongoDB
+
+  await fileModel.findByIdAndDelete(fileID);
+  console.log(`File with ID ${fileID} deleted from MongoDB`);
+}
+
+//For demoing purpose only and does not represent the final product
+async function getAllFiles(req, res) {
+  return await fileModel.find();
+}
+
+//For demoing purpose only and does not represent the final product
+// async function updateFile(req, res) {
+//   try {
+//     const { fileID } = req.params;
+
+//     const updatedFile = await fileModel.findByIdAndUpdate(fileID, req.body, { new: true });
+
+//     if (!updatedFile) {
+//       return res.status(401).json({ message: `File is not found.` });
+//     } else {
+//       return res.status(200).json(updatedFile);
+//     }
+//   } catch (error) {
+//     console.log(error.message);
+//     res.status(500).send({ message: error.message });
+//   }
+// }
+
+export {
+  getAll,
+  get,
+  create,
+  updatePassword,
+  removeOne,
+  getAllFiles,
+  // updateFile,
+  deleteFile,
+  createFile,
+};
