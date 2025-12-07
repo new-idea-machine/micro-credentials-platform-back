@@ -29,9 +29,9 @@ User GET Tests
  6. Get an existing instructor user.
  7. Get the same instructor user using the wrong password.
 
-
 User Profile PATCH Tests
 -----------------------
+
  1. Update profile of non existent user.
  2. Update the user profile name path.
  3. Update the user profile with learnerData path.
@@ -41,25 +41,19 @@ User Profile PATCH Tests
 
  User DELETE Tests
  ------------------
- 1. Delete all the users.
 
+ 1. Delete the test learner user.
+ 2. Delete the test instructor user.
 */
 
-/*
-When jest supports importing modules, the following code fragment can be
-used:
+import dotenv from "dotenv";
 
-  import dotenv from "dotenv";
+dotenv.config();
 
-  dotenv.config();
-
-  const port = process.env.PORT;
-
-  console.assert(port?.length > 0, "Server port not specified -- add \"PORT=<port>\" to .env");
-*/
-
-const port = "5001"; // MUST match the setting in .env
+const port = process.env.PORT;
 const serverURL = `http://localhost:${port}`;
+
+console.assert(port?.length > 0, "Server port not specified -- add \"PORT=<port>\" to .env");
 
 const learnerUserData = {
   credentials: {
@@ -603,7 +597,7 @@ test("Update profile of non existent user", async function () {
   /*
   TEST 1:  Update profile of a non-existent user.
 
-  EXPECTED RESULT:  Fail (status 404).
+  EXPECTED RESULT:  Fail (status 401).
   */
 
   const updatedUserInfo = structuredClone(learnerUserData.userInfo);
@@ -618,7 +612,7 @@ test("Update profile of non existent user", async function () {
   const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
 
   expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(404);
+  expect(response?.status).toBe(401);
   expect(result).toBe(undefined);
 });
 
@@ -648,7 +642,7 @@ test("Update the user profile with learnerData path.", async function () {
   /*
   TEST 3:  Update the user profile with learnerData path.
 
-  EXPECTED RESULT:  Fail (status 400).
+  EXPECTED RESULT:  Success (status 200).
   */
 
   const updatedUserInfo = {
@@ -661,9 +655,9 @@ test("Update the user profile with learnerData path.", async function () {
 
   const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
 
-  expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(400);
-  expect(result).toBe(undefined);
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(typeof result).toBe("object");
 });
 
 /*********************************************************************************************/
@@ -672,7 +666,7 @@ test("Update the user profile with instructorData path", async function () {
   /*
     TEST 4:  Update the user profile with instructorData path.
 
-    EXPECTED RESULT:  Fail (status 400).
+    EXPECTED RESULT:  Success (status 200).
     */
 
   const updatedUserInfo = {
@@ -685,9 +679,9 @@ test("Update the user profile with instructorData path", async function () {
 
   const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
 
-  expect(response?.ok).toBe(false);
-  expect(response?.status).toBe(400);
-  expect(result).toBe(undefined);
+  expect(response?.ok).toBe(true);
+  expect(response?.status).toBe(200);
+  expect(typeof result).toBe("object");
 });
 /*********************************************************************************************/
 
@@ -737,16 +731,32 @@ test("Update the user profile password path", async function () {
 // USER DELETE TESTS
 // ============================================================================================
 
-test("Delete all the users.", async function () {
+test("Delete the test learner user.", async function () {
   /*
-  TEST 1:  Delete all the users.
+  TEST 1:  Delete the test learner user.
 
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const [response, result] = await sendRequest("DELETE", "/");
+  const credentials = structuredClone(learnerUserData.credentials);
 
-  // The status is 404 since the service returns no data once the request is made to delete all the users
-  expect(response?.status).toBe(404);
+  const [response, result] = await sendRequest("DELETE", "/user", credentials, learnerUserData);
+
+  expect(response?.status).toBe(200);
+  expect(result).toBe(undefined);
+});
+
+test("Delete the test instructor user.", async function () {
+  /*
+  TEST 2:  Delete the test instructor user.
+
+  EXPECTED RESULT:  Success (status 200).
+  */
+
+  const credentials = structuredClone(instructorUserData.credentials);
+
+  const [response, result] = await sendRequest("DELETE", "/user", credentials, instructorUserData);
+
+  expect(response?.status).toBe(200);
   expect(result).toBe(undefined);
 });

@@ -1,12 +1,12 @@
 {
   "type": "module",
   "name": "micro-credentials-platform-back",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "",
   "main": "server.js",
   "scripts": {
     "doc": "jsdoc -c ./jsdoc.json ./src",
-    "test": "jest"
+    "test": "npx --node-options=\"--experimental-vm-modules\" jest"
   },
   "keywords": [],
   "author": "",
