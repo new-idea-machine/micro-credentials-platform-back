@@ -11,8 +11,8 @@ User POST Tests
  4. Register a new learner user with a missing e-mail address.
  5. Register a new learner user with a bad e-mail address.
  6. Register a new learner user with a missing password.
- 7. Register a new learner user with a missing user type.
- 8. Register a new learner user with a bad user type.
+ 7. Register a new learner user with an invalid password.
+ 8. Register a new learner user with an invalid information object.
  9. Register a new learner user.
 10. Re-register the same learner user.
 11. Register a new instructor user.
@@ -23,7 +23,7 @@ User GET Tests
 
  1. Get a user without providing an e-mail.
  2. Get a user without providing a password.
- 3. Get a non-existent user.
+ 3. Get a non-existent learner user.
  4. Get an existing learner user.
  5. Get the same learner user using the wrong password.
  6. Get an existing instructor user.
@@ -32,18 +32,21 @@ User GET Tests
 User Profile PATCH Tests
 -----------------------
 
- 1. Update profile of non existent user.
- 2. Update the user profile name path.
- 3. Update the user profile with learnerData path.
- 4. Update the user profile with instructorData path.
- 5. Update the user profile email path.
- 6. Update the user profile password path.
+ 1. Update a user's profile without providing credentials
+ 2. Update learner user's profile using invalid credentials.
+ 3. Update the learner user's name.
+ 4. Add a course to the learner user's profile.
+ 5. Add a course to the instructor user's profile.
+ 6. Update the learner user's email address.
+ 7. Update the learner user's password.
 
  User DELETE Tests
  ------------------
 
- 1. Delete the test learner user.
- 2. Delete the test instructor user.
+ 1. Delete a user without passing a bearer token.
+ 2. Delete a user by passing a blank bearer token.
+ 3. Delete the test learner user.
+ 4. Delete the test instructor user.
 */
 
 import dotenv from "dotenv";
@@ -52,31 +55,42 @@ dotenv.config();
 
 const port = process.env.PORT;
 const serverURL = `http://localhost:${port}`;
-
-console.assert(port?.length > 0, "Server port not specified -- add \"PORT=<port>\" to .env");
+const learnerEmail = `learner_${Date.now()}@test.user`;
+const instructorEmail = `instructor_${Date.now()}@test.user`;
 
 const learnerUserData = {
-  credentials: {
-    email: `learner_${Date.now()}@test.user`,
+  basicAuth: {
+    type: "Basic",
+    email: learnerEmail,
     password: "T35t^U$er"
+  },
+  bearerAuth: {
+    type: "Bearer",
+    token: undefined
   },
   userInfo: {
     name: "Test Learner User",
-    isInstructor: false,
+    email: learnerEmail,
     learnerData: {
       courses: []
-    }
+    },
+    instructorData: null
   }
 };
 
 const instructorUserData = {
-  credentials: {
-    email: `instructor_${Date.now()}@test.user`,
+  basicAuth: {
+    type: "Basic",
+    email: instructorEmail,
     password: "T35t^U$er"
+  },
+  bearerAuth: {
+    type: "Bearer",
+    token: undefined
   },
   userInfo: {
     name: "Test Instructor User",
-    isInstructor: true,
+    email: instructorEmail,
     learnerData: {
       courses: []
     },
@@ -86,9 +100,11 @@ const instructorUserData = {
   }
 };
 
+console.assert(port?.length > 0, 'Server port not specified -- add "PORT=<port>" to .env');
+
 /*********************************************************************************************/
 
-async function sendRequest(method, path, credentials, data = null) {
+async function sendRequest(method, path, credentials = null, data = null) {
   /*
   Handle all of the communication with the server.
 
@@ -102,6 +118,12 @@ async function sendRequest(method, path, credentials, data = null) {
   contain a JSON string).
   */
 
+  console.assert(
+    ["GET", "POST", "PATCH", "DELETE"].includes(method),
+    "Invalid HTTP request method"
+  );
+  console.assert(path?.startsWith("/"), "Invalid path");
+
   let parameters = "";
 
   const options = {
@@ -110,9 +132,26 @@ async function sendRequest(method, path, credentials, data = null) {
     headers: {}
   };
 
-  if (credentials) {
+  if (credentials?.type === "Basic") {
+    console.assert(
+      typeof credentials.email === "string",
+      "Missing basic authentication e-mail"
+    );
+    console.assert(
+      typeof credentials.password === "string",
+      "Missing basic authentication password"
+    );
+
     const credentialsBuffer = Buffer.from(`${credentials.email}:${credentials.password}`);
+
     options.headers["Authorization"] = `Basic ${credentialsBuffer.toString("base64")}`;
+  } else if (credentials?.type === "Bearer") {
+    console.assert(
+      typeof credentials?.token === "string",
+      "Missing bearer authentication token"
+    );
+
+    options.headers["Authorization"] = `Bearer ${credentials.token}`;
   }
 
   if (data) {
@@ -155,7 +194,7 @@ function validateCredentialObject(userData, result) {
   expect(typeof result.access_token).toBe("string");
   expect(result.token_type).toBe("Bearer");
   expect(result.user_data.name).toBe(userData.userInfo.name);
-  expect(result.user_data.email).toBe(userData.credentials.email);
+  expect(result.user_data.email).toBe(userData.basicAuth.email);
   expect(typeof result.user_data.learnerData).toBe("object");
 
   if (userData.userInfo.isInstructor)
@@ -181,11 +220,10 @@ test("Register New Learner User (Missing Name)", async function () {
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
@@ -206,11 +244,10 @@ test("Register New Learner User (Bad Name Type)", async function () {
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
@@ -231,11 +268,10 @@ test("Register New Learner User (Bad Name)", async function () {
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
@@ -251,16 +287,15 @@ test("Register New Learner User (Missing E-mail Address)", async function () {
 
   const badData = structuredClone(learnerUserData);
 
-  badData.credentials.email = "";
+  badData.basicAuth.email = "";
 
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
@@ -276,16 +311,15 @@ test("Register New Learner User (Bad E-mail Address)", async function () {
 
   const badData = structuredClone(learnerUserData);
 
-  badData.credentials.email = "Bad e-mail address";
+  badData.basicAuth.email = "Bad e-mail address";
 
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
@@ -301,50 +335,48 @@ test("Register New Learner User (Missing Password)", async function () {
 
   const badData = structuredClone(learnerUserData);
 
-  badData.credentials.password = "";
+  badData.basicAuth.password = "";
 
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Missing User Type)", async function () {
+test("Register New Learner User (Invalid Password)", async function () {
   /*
-  TEST 7:  Register a new learner user with a bad password.
+  TEST 7:  Register a new learner user with an invalid password.
 
   EXPECTED RESULT:  Fail (status 406).
   */
 
   const badData = structuredClone(learnerUserData);
 
-  delete badData.userInfo.isInstructor;
+  badData.basicAuth.password = "password"; // the weakest possible password
 
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
 
 /*********************************************************************************************/
 
-test("Register New Learner User (Bad User Type)", async function () {
+test("Register New Learner User (Invalid Information Object)", async function () {
   /*
-  TEST 8:  Register a new learner user with a bad user type.
+  TEST 8:  Register a new learner user with an invalid information object.
 
   EXPECTED RESULT:  Fail (status 406).
   */
@@ -353,14 +385,15 @@ test("Register New Learner User (Bad User Type)", async function () {
 
   badData.userInfo.isInstructor = 42;
 
+  delete badData.userInfo.instructorData;
+
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    badData.credentials,
+    badData.basicAuth,
     badData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(406);
   expect(result).toBe(undefined);
 });
@@ -377,14 +410,19 @@ test("Register New Learner User", async function () {
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    learnerUserData.credentials,
+    learnerUserData.basicAuth,
     learnerUserData.userInfo
   );
 
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
   expect(result).not.toBe(undefined);
   validateCredentialObject(learnerUserData, result);
+
+  /*
+  The bearer token is added to the "learnerUserData" object at this point for future use.
+  */
+
+  learnerUserData.bearerAuth.token = result.access_token;
 });
 
 /*********************************************************************************************/
@@ -399,11 +437,10 @@ test("Re-Register New Learner User", async function () {
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    learnerUserData.credentials,
+    learnerUserData.basicAuth,
     learnerUserData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(403);
   expect(result).toBe(undefined);
 });
@@ -420,14 +457,19 @@ test("Register New Instructor User", async function () {
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    instructorUserData.credentials,
+    instructorUserData.basicAuth,
     instructorUserData.userInfo
   );
 
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(201);
   expect(result).not.toBe(undefined);
   validateCredentialObject(instructorUserData, result);
+
+  /*
+  The bearer token is added to the "instructorUserData" object at this point for future use.
+  */
+
+  instructorUserData.bearerAuth.token = result.access_token;
 });
 
 /*********************************************************************************************/
@@ -442,11 +484,10 @@ test("Re-Register New Instructor User", async function () {
   const [response, result] = await sendRequest(
     "POST",
     "/auth",
-    instructorUserData.credentials,
+    instructorUserData.basicAuth,
     instructorUserData.userInfo
   );
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(403);
   expect(result).toBe(undefined);
 });
@@ -462,13 +503,12 @@ test("Get a User Without Providing an E-mail", async function () {
   EXPECTED RESULT:  Fail (status 404).
   */
 
-  const credentials = structuredClone(learnerUserData.credentials);
+  const credentials = structuredClone(learnerUserData.basicAuth);
 
   credentials.email = "";
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(404);
   expect(result).toBe(undefined);
 });
@@ -482,13 +522,12 @@ test("Get a User Without Providing a Password", async function () {
   EXPECTED RESULT:  Fail (status 401).
   */
 
-  const credentials = structuredClone(learnerUserData.credentials);
+  const credentials = structuredClone(learnerUserData.basicAuth);
 
   credentials.password = "";
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(401);
   expect(result).toBe(undefined);
 });
@@ -502,13 +541,12 @@ test("Get a Non-Existent Learner User", async function () {
   EXPECTED RESULT:  Fail (status 404).
   */
 
-  const credentials = structuredClone(learnerUserData.credentials);
+  const credentials = structuredClone(learnerUserData.basicAuth);
 
   credentials.email = "-" + credentials.email;
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(404);
   expect(result).toBe(undefined);
 });
@@ -522,10 +560,8 @@ test("Get an Existing Learner User", async function () {
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const credentials = structuredClone(learnerUserData.credentials);
-  const [response, result] = await sendRequest("GET", "/auth", credentials);
+  const [response, result] = await sendRequest("GET", "/auth", learnerUserData.basicAuth);
 
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(result).not.toBe(undefined);
   validateCredentialObject(learnerUserData, result);
@@ -540,13 +576,12 @@ test("Get the Same Learner User Using Wrong Password", async function () {
   EXPECTED RESULT:  Fail (status 401).
   */
 
-  const credentials = structuredClone(learnerUserData.credentials);
+  const credentials = structuredClone(learnerUserData.basicAuth);
 
   credentials.password = "wrong_password";
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(401);
   expect(result).toBe(undefined);
 });
@@ -560,10 +595,8 @@ test("Get an Existing Instructor User", async function () {
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const credentials = structuredClone(instructorUserData.credentials);
-  const [response, result] = await sendRequest("GET", "/auth", credentials);
+  const [response, result] = await sendRequest("GET", "/auth", instructorUserData.basicAuth);
 
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(result).not.toBe(undefined);
   validateCredentialObject(instructorUserData, result);
@@ -578,13 +611,12 @@ test("Get the Same Instructor User Using Wrong Password", async function () {
   EXPECTED RESULT:  Fail (status 401).
   */
 
-  const credentials = structuredClone(instructorUserData.credentials);
+  const credentials = structuredClone(instructorUserData.basicAuth);
 
   credentials.password = "wrong_password";
 
   const [response, result] = await sendRequest("GET", "/auth", credentials);
 
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(401);
   expect(result).toBe(undefined);
 });
@@ -593,154 +625,214 @@ test("Get the Same Instructor User Using Wrong Password", async function () {
 // USER PROFILE PATCH TESTS
 // ============================================================================================
 
-test("Update profile of non existent user", async function () {
+test("Update a user's profile without providing credentials", async function () {
   /*
-  TEST 1:  Update profile of a non-existent user.
+  TEST 1:  Update learner user's profile using invalid credentials.
 
   EXPECTED RESULT:  Fail (status 401).
   */
 
-  const updatedUserInfo = structuredClone(learnerUserData.userInfo);
+  const [response, result] = await sendRequest("PATCH", "/user", null, learnerUserData);
 
-  updatedUserInfo.name = "NewName";
-  delete updatedUserInfo.learnerData;
-
-  const credentials = structuredClone(learnerUserData.credentials);
-
-  credentials.email = "-" + credentials.email;
-
-  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
-
-  expect(response?.ok).toBe(false);
   expect(response?.status).toBe(401);
   expect(result).toBe(undefined);
 });
 
 /*********************************************************************************************/
 
-test("Update the user profile name path", async function () {
+test("Update learner user's profile using invalid credentials", async function () {
   /*
-  TEST 2:  Update the user profile name path.
+  TEST 2:  Update learner user's profile using invalid credentials.
 
-  EXPECTED RESULT:  Success (status 200).
+  EXPECTED RESULT:  Fail (status 401).
   */
 
-  const updatedUserInfo = { name: "NewName" };
+  const credentials = structuredClone(learnerUserData.bearerAuth);
 
-  const credentials = structuredClone(learnerUserData.credentials);
+  credentials.token = "bad_token";
 
-  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
+  const [response, result] = await sendRequest("PATCH", "/user", credentials, learnerUserData);
 
-  expect(response?.ok).toBe(true);
-  expect(response?.status).toBe(200);
-  expect(result?.name).toBe("NewName");
+  expect(response?.status).toBe(401);
+  expect(result).toBe(undefined);
 });
 
 /*********************************************************************************************/
 
-test("Update the user profile with learnerData path.", async function () {
+test("Update the learner user's name", async function () {
   /*
-  TEST 3:  Update the user profile with learnerData path.
+  TEST 3:  Update the learner user's name.
+
+  EXPECTED RESULT:  Success (status 200).
+  */
+
+  const updatedUserInfo = { name: "Test Learner User, New Name" };
+
+  const [response, result] = await sendRequest(
+    "PATCH",
+    "/user",
+    learnerUserData.bearerAuth,
+    updatedUserInfo
+  );
+
+  expect(response?.status).toBe(200);
+  expect(result?.name).toBe(updatedUserInfo.name);
+});
+
+/*********************************************************************************************/
+
+test("Add a course to the learner user's profile.", async function () {
+  /*
+  TEST 4:  Add a course to the learner user's profile.
 
   EXPECTED RESULT:  Success (status 200).
   */
 
   const updatedUserInfo = {
     learnerData: {
-      courses: ["12345656778"]
+      courses: [...learnerUserData.userInfo.learnerData.courses, "12345656778"]
     }
   };
 
-  const credentials = structuredClone(learnerUserData.credentials);
+  const [response, result] = await sendRequest(
+    "PATCH",
+    "/user",
+    learnerUserData.bearerAuth,
+    updatedUserInfo
+  );
 
-  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
-
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(typeof result).toBe("object");
 });
 
 /*********************************************************************************************/
 
-test("Update the user profile with instructorData path", async function () {
+test("Add a course to the instructor user's profile.", async function () {
   /*
-    TEST 4:  Update the user profile with instructorData path.
+  TEST 5:  Add a course to the instructor user's profile.
 
-    EXPECTED RESULT:  Success (status 200).
-    */
+  EXPECTED RESULT:  Success (status 200).
+  */
 
   const updatedUserInfo = {
     instructorData: {
-      courses: ["12345678901"]
+      courses: [...instructorUserData.userInfo.learnerData.courses, "12345678901"]
     }
   };
 
-  const credentials = structuredClone(instructorUserData.credentials);
+  const [response, result] = await sendRequest(
+    "PATCH",
+    "/user",
+    instructorUserData.bearerAuth,
+    updatedUserInfo
+  );
 
-  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
-
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
   expect(typeof result).toBe("object");
 });
+
 /*********************************************************************************************/
 
-test("Update the user profile email path", async function () {
+test("Update the learner user's email address", async function () {
   /*
-  TEST 5:  Update the user profile email path.
+  TEST 6:  Update the learner user's email address.
 
   EXPECTED RESULT:  Success (status 200).
   */
 
   const updatedUserInfo = {
-    email: `learner@test.user`
+    email: `learner_${Date.now()}@test.user`
   };
 
-  const credentials = structuredClone(learnerUserData.credentials);
+  const [response, result] = await sendRequest(
+    "PATCH",
+    "/user",
+    learnerUserData.bearerAuth,
+    updatedUserInfo
+  );
 
-  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
-
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
-  expect(result?.email).toBe("learner@test.user");
+  expect(typeof result).toBe("object");
+  expect(result?.email).toBe(updatedUserInfo.email);
+  expect(result?.email).not.toBe(learnerUserData.email);
+
+  /*
+  The new email address is stored in the "learnerData" object at this point for future use.
+  */
+
+  learnerUserData.basicAuth.email = updatedUserInfo.email;
+  learnerUserData.userInfo.email = updatedUserInfo.email;
 });
 
 /*********************************************************************************************/
 
-test("Update the user profile password path", async function () {
+test("Update the learner user's password", async function () {
   /*
-  TEST 6:  Update the user profile password path.
+  TEST 6:  Update the learner user's password.
 
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const updatedUserInfo = { password: "new_password" };
+  const updatedUserInfo = { password: "new_T35t^U$er" };
+  const [response, result] = await sendRequest(
+    "PATCH",
+    "/user",
+    learnerUserData.bearerAuth,
+    updatedUserInfo
+  );
 
-  const credentials = structuredClone(learnerUserData.credentials);
-
-  credentials.email = "learner@test.user";
-
-  const [response, result] = await sendRequest("PATCH", "/user", credentials, updatedUserInfo);
-
-  expect(response?.ok).toBe(true);
   expect(response?.status).toBe(200);
-  expect(result?.password).toBe("new_password");
+  expect(result?.password).toBe(undefined);
+
+  /*
+  The new password is stored in the "learnerData" object at this point for future use.
+  */
+
+  learnerUserData.basicAuth.password = updatedUserInfo.password;
 });
 
 // ============================================================================================
 // USER DELETE TESTS
 // ============================================================================================
 
+test("Delete a user without passing a bearer token.", async function () {
+  /*
+  TEST 1:  Delete a user without passing a bearer token.
+
+  EXPECTED RESULT:  Fail (status 401).
+  */
+
+  const [response, result] = await sendRequest("DELETE", "/user");
+
+  expect(response?.status).toBe(401);
+  expect(result).toBe(undefined);
+});
+
+test("Delete a user by passing a blank bearer token.", async function () {
+  /*
+  TEST 2:  Delete a user by passing a blank bearer token.
+
+  EXPECTED RESULT:  Fail (status 401).
+  */
+
+  const badCredentials = structuredClone(learnerUserData.bearerAuth);
+
+  badCredentials.token = "";
+
+  const [response, result] = await sendRequest("DELETE", "/user", badCredentials);
+
+  expect(response?.status).toBe(401);
+  expect(result).toBe(undefined);
+});
+
 test("Delete the test learner user.", async function () {
   /*
-  TEST 1:  Delete the test learner user.
+  TEST 3:  Delete the test learner user.
 
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const credentials = structuredClone(learnerUserData.credentials);
-
-  const [response, result] = await sendRequest("DELETE", "/user", credentials, learnerUserData);
+  const [response, result] = await sendRequest("DELETE", "/user", learnerUserData.bearerAuth);
 
   expect(response?.status).toBe(200);
   expect(result).toBe(undefined);
@@ -748,14 +840,16 @@ test("Delete the test learner user.", async function () {
 
 test("Delete the test instructor user.", async function () {
   /*
-  TEST 2:  Delete the test instructor user.
+  TEST 4:  Delete the test instructor user.
 
   EXPECTED RESULT:  Success (status 200).
   */
 
-  const credentials = structuredClone(instructorUserData.credentials);
-
-  const [response, result] = await sendRequest("DELETE", "/user", credentials, instructorUserData);
+  const [response, result] = await sendRequest(
+    "DELETE",
+    "/user",
+    instructorUserData.bearerAuth
+  );
 
   expect(response?.status).toBe(200);
   expect(result).toBe(undefined);
