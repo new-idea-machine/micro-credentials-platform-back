@@ -172,49 +172,43 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
+
   /courses:
     summary: Perform Create and Read operations on courses.
-    description: This resource comprises of READ and Write operations that can be performed on the courses object.
+    description: >-
+      This resource comprises of READ and Write operations that can be performed on the courses
+      object.
+
     get:
-      summary: Get all the courses.
-      description: Returns a list of course.
-      parameters:
-        - in: query
-          name: page
-          description: Page number of results to retrieve.
-          schema:
-            type: integer
-            default: 1
-        - in: query
-          name: limit
-          description: Number of results to retrieve per page.
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 50
-            default: 10
+      summary: Get all available courses
+      description: >-
+        Returns all courses available for registration.  The courses do not contain any components
+        (i.e. modules or assessments) and are therefore suitable for public promotion.
       tags:
         - Courses
       responses:
         "200":
-          description: List of courses
+          description: List of available courses
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Course"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "404":
-          description: No Courses not found.
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
+
     post:
-      summary: Create a new course.
-      description: Create a new course resource.
+      summary: Create a new course
+      description: >-
+        Create a new course.  Only instructors can create courses.  The "UID" field must be an
+        empty string, and the "instructor" field must be the same as the authenticated user.  If
+        successful, the user's database document is automatically updated to include the new
+        course.
       tags:
         - Courses
+      security:
+        - AuthHTTPBearer: []
       requestBody:
         description: Course details.
         required: true
@@ -224,15 +218,17 @@ paths:
               $ref: "#/components/schemas/Course"
       responses:
         "201":
-          description: Course successfully created.
+          description: Course successfully created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Course"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: User is not an instructor
         "406":
-          description: Invalid data.
+          $ref: "#/components/responses/InvalidData"
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
 
@@ -262,150 +258,14 @@ paths:
                   - error
         "504":
           $ref: "#/components/responses/CantConnectToDatabase"
-    put:
-      summary: Update a specific course.
-      description: Update the course resource by specifying its ID.
-      tags:
-        - Courses
-      requestBody:
-        description: Updated course details.
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Course"
-      responses:
-        "200":
-          description: Course successfully updated.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Course"
-        "401":
-          description: Not authorized.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
-        "404":
-          description: Course not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
-        "406":
-          description: Invalid data.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
-        "504":
-          $ref: "#/components/responses/CantConnectToDatabase"
-    delete:
-      summary: Delete a specific course.
-      description: Delete the course resource by specifying its ID.
-      tags:
-        - Courses
-      responses:
-        "204":
-          description: Course successfully deleted.
-        "401":
-          description: Not authorized.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
-        "404":
-          description: Course not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                required:
-                  - error
-        "504":
-          $ref: "#/components/responses/CantConnectToDatabase"
 
-  /courses:
-    get:
-      summary: Get all available courses
-      description: >-
-        Returns all courses available for registration.  The courses do not contain any components
-        (i.e. modules or assessments) and are therefore suitable for public promotion.
-      responses:
-        "200":
-          description: List of available courses
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Course"
-        "504":
-          $ref: "#/components/responses/CantConnectToDatabase"
-
-    post:
-      summary: Create a new course
-      description: >-
-        Create a new course.  Only instructors can create courses.  The "UID" field must be an
-        empty string, and the "instructor" field must be the same as the authenticated user.  If
-        successful, the user's database document is automatically updated to include the new
-        course.
-      security:
-        - AuthHTTPBearer: []
-      requestBody:
-        description: Details of the course to be created
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Course"
-      responses:
-        "201":
-          description: Course successfully created
-          content:
-            text/plain:
-              schema:
-                type:  string
-                description:  Course UID
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          description: User is not an instructor
-        "406":
-          $ref: "#/components/responses/InvalidData"
-        "504":
-          $ref: "#/components/responses/CantConnectToDatabase"
-
-  /courses/{courseId}:
     patch:
       summary: Update a specific course
       description: >-
         Update details of a specific course.  Only the instructor who created the course can update
         it.
+      tags:
+        - Courses
       security:
         - AuthHTTPBearer: []
       parameters:
@@ -441,6 +301,8 @@ paths:
       description: >-
         Delete a specific course.  Only the instructor who created the course can delete it.
         This will not remove the course from any enrolled learners.
+      tags:
+        - Courses
       security:
         - AuthHTTPBearer: []
       parameters:
