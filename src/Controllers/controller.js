@@ -122,8 +122,6 @@ async function create(req, res) {
     res.status(406).send();
   } else if (typeof user?.name !== "string") {
     res.status(406).send();
-  } else if (typeof user?.isInstructor !== "boolean") {
-    res.status(406).send();
   } else {
     const registrant = new userModel({
       name: user.name,
@@ -174,7 +172,7 @@ async function update(req, res) {
   } else {
     try {
       const user = await userModel
-        .findOneAndUpdate({ email: req.userUid }, req.body)
+        .findOneAndUpdate({ email: req.userUid }, req.body, { new: true })
         .lean();
       if (!user) {
         res.status(406).send();

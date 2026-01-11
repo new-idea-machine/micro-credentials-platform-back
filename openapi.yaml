@@ -3,7 +3,7 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.9.0"
+  version: "0.10.0"
 
 servers:
   - url: http://localhost/api:5001
@@ -624,7 +624,7 @@ components:
           maxItems: 26
         answer:
           type: integer
-        correctChoice:
+        correctOption:
           type: integer
         explanation:
           type: string
