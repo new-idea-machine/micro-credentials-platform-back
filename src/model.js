@@ -44,8 +44,9 @@ console.log(`Connected to ${connectionString}`);
  * enrolled in.
  */
 const learnerSchema = new mongoose.Schema({
-  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
-});
+  _id: false,
+   courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
+ });
 
 /**
  * Instructor data schema.
@@ -54,8 +55,9 @@ const learnerSchema = new mongoose.Schema({
  * @property {Array<ObjectId>} courses - References to the instructor's Course documents.
  */
 const instructorSchema = new mongoose.Schema({
-  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
-});
+  _id: false,
+   courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
+ });
 
 /**
  * User schema for the database.
@@ -118,13 +120,13 @@ userSchema.pre(
 
     if (this.isModified("password")) {
       try {
-        const salt = await bcrypt.genSalt(BCRYPT_NUM_SALT_ROUNDS);
-        this.password = await bcrypt.hash(this.password, salt);
+      const salt = await bcrypt.genSalt(BCRYPT_NUM_SALT_ROUNDS);
+      this.password = await bcrypt.hash(this.password, salt);
 
         next();
       } catch (error) {
         next(error);
-      }
+  }
     } else {
       next();
     }
@@ -146,6 +148,7 @@ userSchema.pre(
  */
 const questionSchema = new mongoose.Schema(
   {
+    _id: false,
     question: { type: String, required: true },
     options: {
       type: [String],
@@ -199,30 +202,47 @@ const questionSchema = new mongoose.Schema(
  * @property {Date} creationTime - When this module was created.
  * @property {Date} updateTime - When this module was last updated.
  */
-const moduleSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  type: {
-    type: String,
+const moduleSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    type: {
+      type: String,
     required: true,
     enum: ["Audio", "Video", "Markdown"]
-  },
-  chapters: [
-    {
-      _id: false,
-      title: { type: String, required: true },
-      timeIndex: { type: Number, required: true } // in seconds
-    }
-  ],
-  url: { type: String, required: true },
-  urlAuthentication: {
-    type: {
-      scheme: String,
-      parameters: String
     },
-    required: false
+    chapters: {
+      type: [
+        {
+          _id: false,
+          title: { type: String, required: true },
+          timeIndex: { type: Number, required: true } // in seconds
+        }
+      ],
+      default: undefined
+    },
+    url: { type: String, required: true },
+    urlAuthentication: {
+      type: {
+        scheme: String,
+        parameters: String
+      },
+      required: false
+    },
+    completed: Boolean
   },
-  completed: Boolean
+  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
+);
+
+moduleSchema.pre("validate", function (next) {
+  //Checks for chapters: This field will only be present if the "type" field is Audio or Video
+  if ((this.type === "Audio" || this.type === "Video") && !Array.isArray(this.chapters)) {
+    throw new Error("Chapters field is required when type is Audio or Video");
+  }
+  if ((this.type === "Markdown") && (this.chapters !== undefined)) {
+    throw new Error("Chapters field cannot be present when type is Markdown");
+  }
+  next();
 });
 
 /**
@@ -236,42 +256,48 @@ const moduleSchema = new mongoose.Schema({
  * @property {Date} creationTime - When this assessment was created.
  * @property {Date} updateTime - When this assessment was last updated.
  */
-const assessmentSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  questions: { type: [questionSchema], required: true },
-  currentQuestion: {
-    type: Number,
-    validate: {
-      validator: function (currentQuestion) {
-        return currentQuestion >= 0 && currentQuestion < this.questions.length;
-      },
-      message:
-        "The index of the current question must be at least 0 and less than the number of questions"
+const assessmentSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    questions: { type: [questionSchema], required: true },
+    currentQuestion: {
+      type: Number,
+      validate: {
+        validator: function (currentQuestion) {
+          return currentQuestion >= 0 && currentQuestion < this.questions.length;
+        },
+        message:
+          "The index of the current question must be at least 0 and less than the number of questions"
+      }
     }
-  }
-});
+  },
+  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
+);
 
 /**
- * Component schema.
- *
- * This allows Course components to be either Modules or Assessments and uses a discriminator to
- * distinguish between them.
+ * Component reference schema for courses.
+ * References either a Module or Assessment by ID and type.
  *
  * @kind class
- * @property {string} componentType - Discriminator key ("Module" or "Assessment").
+ * @property {string} componentType - Type of component ("Module" or "Assessment").
+ * @property {ObjectId} componentId - Reference to the Module or Assessment document.
+ * @property {boolean} [completed] - Whether or not a learner has completed this component.
  */
-const componentSchema = new mongoose.Schema(
+const componentRefSchema = new mongoose.Schema(
   {
+    _id: false,
     componentType: {
       type: String,
       required: true,
       enum: ["Module", "Assessment"]
-    }
-  },
-  {
-    discriminatorKey: "componentType",
-    _id: false,
-    timestamps: { createdAt: "creationTime", updatedAt: "updateTime" }
+    },
+    componentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      refPath: "components.componentType"
+    },
+    // Learner-specific fields
+    completed: { type: Boolean, default: false }
   }
 );
 
@@ -295,7 +321,7 @@ const courseSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String, required: true },
     instructor: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
-    components: [componentSchema],
+    components: [componentRefSchema],
     currentComponent: {
       type: Number,
       validate: {
@@ -310,15 +336,6 @@ const courseSchema = new mongoose.Schema(
   },
   { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
 );
-
-/*
-The two schemas for the component discriminator are added here.
-*/
-
-const componentsPath = courseSchema.path("components");
-
-componentsPath.discriminator("Module", moduleSchema);
-componentsPath.discriminator("Assessment", assessmentSchema);
 
 /**
  * File schema for the database.
@@ -342,9 +359,11 @@ const fileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const userModel = database.model("users", userSchema);
-const courseModel = database.model("courses", courseSchema);
-const fileModel = database.model("files", fileSchema);
+const userModel = mongoose.model("users", userSchema);
+const moduleModel = mongoose.model("modules", moduleSchema);
+const assessmentModel = mongoose.model("assessments", assessmentSchema);
+const courseModel = mongoose.model("courses", courseSchema);
+const fileModel = mongoose.model("files", fileSchema);
 
 export {
   database,
@@ -356,6 +375,8 @@ export {
   assessmentSchema,
   courseSchema,
   userModel,
+  moduleModel,
+  assessmentModel,
   courseModel,
   fileModel
 };
