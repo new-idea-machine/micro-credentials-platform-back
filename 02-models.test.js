@@ -1,10 +1,9 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { userModel } from "./src/Models/UserModel.js";
-import { moduleModel } from "./src/Models/ModuleModel.js";
-import { questionModel } from "./src/Models/QuestionModel.js";
-import { assessmentModel } from "./src/Models/AssessmentModel.js";
-import { courseModel } from "./src/Models/CourseModel.js";
+import { assessmentModel,
+  courseModel,
+  moduleModel,
+  userModel } from "./src/model.js";
 
 // Set up the environment
 dotenv.config();
@@ -74,7 +73,7 @@ describe("Modules: Insert", () => {
   test("should insert a new Markdown module with no Chapters", async () => {
     const markdownModule = structuredClone(newModule);
     markdownModule.type = "Markdown";
-    markdownModule.chapters = [];
+    delete markdownModule.chapters;
     const module = await new moduleModel(markdownModule).save();
     expect(module._id).toBeDefined();
     // Delete the saved module
@@ -93,52 +92,10 @@ describe("Modules: Insert", () => {
     expect(module.urlAuthentication).toHaveProperty("scheme");
     expect(module.urlAuthentication).toHaveProperty("parameters");
     expect(module.completed).toBe(false);
-    expect(module.createdAt).toBeDefined();
+    expect(module.creationTime).toBeDefined();
 
     // Delete the saved module
     await moduleModel.deleteOne({ _id: module._id });
-  });
-});
-
-/*================================================================
-Question model tests
-================================================================*/
-describe("Question: Insert", () => {
-  const newQuestion = {
-    question: "What color is Manchester?",
-    options: ["Red", "Blue", "Yellow", "Cyan"],
-    answer: 0,
-    correctOption: 0,
-    explanation: "Manchester is and always will be Red"
-  };
-
-  test("should not insert a question with less than 2 options", async () => {
-    const question = new questionModel({ ...newQuestion, options: ["Red"] });
-    await expect(question.save()).rejects.toThrow(
-      /The number of options must be between 2 and 26/
-    );
-  });
-
-  test("should not insert a question with answer less than 0", async () => {
-    const question = new questionModel({ ...newQuestion, answer: -1 });
-    await expect(question.save()).rejects.toThrow(
-      /The answer number must be between 0 and \d+/
-    );
-  });
-
-  test("should insert a question with correct length of options and answer", async () => {
-    const question = await new questionModel(newQuestion).save();
-
-    expect(question._id).toBeDefined();
-    expect(question.question).toBe("What color is Manchester?");
-    expect(question.options).toEqual(["Red", "Blue", "Yellow", "Cyan"]);
-    expect(question.answer).toBe(0);
-    expect(question.correctOption).toBe(0);
-    expect(question.explanation).toBe("Manchester is and always will be Red");
-    expect(question.createdAt).toBeDefined();
-
-    // Delete the saved question
-    await questionModel.deleteOne({ _id: question._id });
   });
 });
 
@@ -167,145 +124,107 @@ describe("Assessment: Insert", () => {
   };
 
   test("should not insert an assessment with current question out of bounds", async () => {
-    const savedQuestion1 = await new questionModel(question1).save();
-    const savedQuestion2 = await new questionModel(question2).save();
     const assessment = new assessmentModel({
       ...newAssessment,
-      questions: [savedQuestion1._id, savedQuestion2._id],
       currentQuestion: 3
     });
     await expect(assessment.save()).rejects.toThrow(
-      /Current question must be at least 0 and no greater than \d+/
+      /assessments validation failed: currentQuestion:/
+    );
+  });
+
+  test("should not insert a question with less than 2 options", async () => {
+    const question = { ...question1, options: ["Paris"] };
+    const assessment = new assessmentModel({ ...newAssessment, questions: [question, question2] });
+    await expect(assessment.save()).rejects.toThrow(
+      /assessments validation failed: questions\.0\.options/
+    );
+  });
+
+  test("should not insert a question with answer less than 0", async () => {
+    const question = { ...question1, answer: -1 };
+    const assessment = new assessmentModel({ ...newAssessment, questions: [question, question2] });
+    await expect(assessment.save()).rejects.toThrow(
+      /assessments validation failed: questions\.0\.answer:/
     );
   });
 
   test("should insert an assessment", async () => {
-    const savedQuestion1 = await new questionModel(question1).save();
-    const savedQuestion2 = await new questionModel(question2).save();
-    const assessment = await new assessmentModel({
-      ...newAssessment,
-      questions: [savedQuestion1._id, savedQuestion2._id]
-    }).save();
+    const assessment = await new assessmentModel(newAssessment).save();
 
     expect(assessment._id).toBeDefined();
     expect(assessment.title).toBe("Test Assessment");
     expect(assessment.questions.length).toBe(2);
     expect(assessment.currentQuestion).toBe(1);
-    expect(assessment.createdAt).toBeDefined();
+    expect(assessment.creationTime).toBeDefined();
 
     // Delete the saved questions and assessment
-    await questionModel.deleteOne({ _id: savedQuestion1._id });
-    await questionModel.deleteOne({ _id: savedQuestion2._id });
     await assessmentModel.deleteOne(assessment._id);
   });
 });
 
 /*================================================================
-Course, User and InstructorData model tests
+User model tests
 ================================================================*/
-describe("Course, User and InstructorData: Insert", () => {
+describe("User: Insert", () => {
+  const learner = {
+    name: "Test Learner User",
+    email: `learner_${Date.now()}@test.user`,
+    password: "123456789",
+    learnerData: { courses: [] }
+  };
   const instructor = {
     name: "Test Instructor User",
     email: `instructor_${Date.now()}@test.user`,
     password: "123456789",
-    learnerData: { courses: [] }
-  };
-
-  const module = {
-    title: "Test Module",
-    description: "This is a test module",
-    type: "Audio",
-    chapters: [
-      { title: "Chapter 1", timeIndex: 120 },
-      { title: "Chapter 2", timeIndex: 180 }
-    ],
-    url: "https://example.com/test-module",
-    urlAuthentication: { scheme: "https", parameters: "token=123" },
-    completed: false
-  };
-
-  const question1 = {
-    question: "What is the capital of France?",
-    options: ["Paris", "Berlin", "Madrid", "London"],
-    answer: 0,
-    correctOption: 0,
-    explanation: "Paris is the capital of France"
-  };
-  const question2 = {
-    question: "Who was the first person to climb Mount Everest?",
-    options: ["Alexander the Great", "Mohammad Ali", "Everest", "Edmund Hillary"],
-    answer: 3,
-    correctOption: 3,
-    explanation: "Edmund Hillary was the first person to climb Mount Everest"
-  };
-  const newAssessment = {
-    title: "Test Assessment",
-    questions: [],
-    currentQuestion: 1
-  };
-
-  const newCourse = {
-    title: "Test Course",
-    description: "Test Course description",
-    instructor: null,
-    components: []
+    learnerData: { courses: [] },
+    instructorData: { courses: [] }
   };
 
   afterEach(async () => {
-    await userModel.deleteMany({});
-    await moduleModel.deleteMany({});
-    await questionModel.deleteMany({});
-    await assessmentModel.deleteMany({});
-    await courseModel.deleteMany({});
+    await userModel.findOneAndDelete({ email: learner.email });
+    await userModel.findOneAndDelete({ email: instructor.email });
   });
 
-  test("should insert a new course", async () => {
+  test("should insert a new learner", async () => {
+    const savedLearner = await new userModel(learner).save();
+    expect(Object.keys(savedLearner.toObject()).length).toBe(Object.keys(learner).length + 2);
+    expect(savedLearner._id).toBeDefined();
+    expect(savedLearner.name).toBe(learner.name);
+    expect(savedLearner.email).toBe(learner.email);
+    expect(savedLearner.password).toBeDefined();
+    expect(savedLearner.learnerData).toBeDefined();
+    expect(Object.keys(savedLearner.toObject().learnerData).length).toBe(Object.keys(learner.learnerData).length);
+    expect(savedLearner.learnerData.courses).toBeDefined();
+    expect(Array.isArray(savedLearner.learnerData.courses)).toBe(true);
+    expect(savedLearner.learnerData.courses.length).toBe(learner.learnerData.courses.length);
+    expect(savedLearner.instructorData).not.toBeDefined();
+  });
+
+  test("should insert a new instructor", async () => {
     const savedInstructor = await new userModel(instructor).save();
-    const savedModule = await new moduleModel(module).save();
-    const savedQuestion1 = await new questionModel(question1).save();
-    const savedQuestion2 = await new questionModel(question2).save();
-    const savedAssessment = await new assessmentModel({
-      title: "Test Assessment",
-      questions: [savedQuestion1, savedQuestion2]
-    }).save();
-
-    const course = await new courseModel({
-      ...newCourse,
-      instructor: savedInstructor._id,
-      components: [savedModule, savedAssessment]
-    }).save();
-    const instructorData = {
-      courses: [course.id]
-    };
-
-    await userModel.updateOne({ email: instructor.email }, { instructorData: instructorData });
-
-    expect(course._id).toBeDefined();
-    expect(course.title).toBe("Test Course");
-    expect(course.instructor).toBe(savedInstructor._id);
-    expect(course.components.length).toBe(2);
-    expect(course.createdAt).toBeDefined();
+    expect(Object.keys(savedInstructor.toObject()).length).toBe(Object.keys(instructor).length + 2);
+    expect(savedInstructor._id).toBeDefined();
+    expect(savedInstructor.name).toBe(instructor.name);
+    expect(savedInstructor.email).toBe(instructor.email);
+    expect(savedInstructor.password).toBeDefined();
+    expect(savedInstructor.learnerData).toBeDefined();
+    expect(Object.keys(savedInstructor.toObject().learnerData).length).toBe(Object.keys(instructor.learnerData).length);
+    expect(savedInstructor.learnerData.courses).toBeDefined();
+    expect(Array.isArray(savedInstructor.learnerData.courses)).toBe(true);
+    expect(savedInstructor.learnerData.courses.length).toBe(learner.learnerData.courses.length);
+    expect(savedInstructor.instructorData).toBeDefined();
+    expect(Object.keys(savedInstructor.toObject().instructorData).length).toBe(Object.keys(instructor.instructorData).length);
+    expect(savedInstructor.instructorData.courses).toBeDefined();
+    expect(Array.isArray(savedInstructor.instructorData.courses)).toBe(true);
+    expect(savedInstructor.instructorData.courses.length).toBe(instructor.instructorData.courses.length);
   });
 });
 
 /*================================================================
-Course, User and LearnerData model tests
+Course model tests
 ================================================================*/
-describe("Course, User and LearnerData: Insert", () => {
-  const instructor = {
-    name: "Test Instructor User",
-    email: `instructor_${Date.now()}@test.user`,
-    password: "123456789",
-    learnerData: { courses: [] }
-  };
-
-  const learner = {
-    name: "Test Learner User",
-    email: `learner_${Date.now()}@gmail.com`,
-    password: "123456789",
-    learnerData: { courses: [] }
-  };
-
+describe("Course: Insert", () => {
   const module = {
     title: "Test Module",
     description: "This is a test module",
@@ -315,7 +234,7 @@ describe("Course, User and LearnerData: Insert", () => {
       { title: "Chapter 2", timeIndex: 180 }
     ],
     url: "https://example.com/test-module",
-    urlAuthentication: { scheme: "https", parameters: "token=123" },
+    urlAuthentication: { scheme: "bearer", parameters: "token=123" },
     completed: false
   };
 
@@ -335,82 +254,53 @@ describe("Course, User and LearnerData: Insert", () => {
   };
   const newAssessment = {
     title: "Test Assessment",
-    questions: [],
+    questions: [question1, question2],
     currentQuestion: 1
   };
 
   const newCourse = {
     title: "Test Course",
     description: "Test Course description",
-    instructor: null,
+    instructor: "0123456789abcdef01234567",
     components: []
   };
 
-  afterAll(async () => {
-    await userModel.deleteMany({});
-    await moduleModel.deleteMany({});
-    await questionModel.deleteMany({});
-    await assessmentModel.deleteMany({});
-    await courseModel.deleteMany({});
-  });
-
   test("should insert a new course", async () => {
-    const savedInstructor = await new userModel(instructor).save();
-    await new userModel(learner).save();
     const savedModule = await new moduleModel(module).save();
-    const savedQuestion1 = await new questionModel(question1).save();
-    const savedQuestion2 = await new questionModel(question2).save();
-    const savedAssessment = await new assessmentModel({
-      title: "Test Assessment",
-      questions: [savedQuestion1, savedQuestion2]
-    }).save();
+    const savedAssessment = await (new assessmentModel(newAssessment)).save();
+    const component1 = {componentType: "Module", componentId: savedModule._id};
+    const component2 = {componentType: "Assessment", componentId: savedAssessment._id};
 
-    const courseInstructor = await new courseModel({
+    const course = await new courseModel({
       ...newCourse,
-      instructor: savedInstructor._id,
-      components: [savedModule, savedAssessment]
+      components: [component1, component2]
     }).save();
-    const instructorData = {
-      courses: [courseInstructor.id]
-    };
 
-    await userModel.updateOne({ email: instructor.email }, { instructorData: instructorData });
+    expect(course._id).toBeDefined();
+    expect(course.title).toBe(newCourse.title);
+    expect(course.instructor.toString()).toBe(newCourse.instructor);
+    expect(course.components.length).toBe(2);
+    expect(course.currentComponent).toBe(newCourse.currentComponent);
+    expect(course.credentialEarned).toBe(newCourse.credentialEarned);
+    expect(course.creationTime).toBeDefined();
+    expect(course.updateTime).toBeDefined();
 
-    const courseLearner = await new courseModel({
-      ...newCourse,
-      instructor: savedInstructor._id,
-      components: [savedModule, savedAssessment],
-      currentComponent: 1,
-      credentialEarned: true
-    }).save();
-    const learnerData = {
-      courses: [courseLearner.id]
-    };
-    await userModel.updateOne({ email: learner.email }, { learnerData: learnerData });
+    expect(course.components[0].componentType).toBe(component1.componentType);
+    expect(course.components[0].componentId.toString()).toBe(savedModule._id.toString());
+    expect(course.components[1].componentType).toBe(component2.componentType);
+    expect(course.components[1].componentId.toString()).toBe(savedAssessment._id.toString());
 
-    expect(courseLearner._id).toBeDefined();
-    expect(courseLearner.title).toBe("Test Course");
-    expect(courseLearner.instructor).toBe(savedInstructor._id);
-    expect(courseLearner.components.length).toBe(2);
-    expect(courseLearner.currentComponent).toBe(1);
-    expect(courseLearner.credentialEarned).toBe(true);
-    expect(courseLearner.createdAt).toBeDefined();
+    // Delete the saved course
+    await courseModel.findByIdAndDelete(course._id.toString());
+    await assessmentModel.findByIdAndDelete(savedAssessment._id.toString());
+    await moduleModel.findByIdAndDelete(savedModule._id.toString());
   });
 
-  test("should not insert a new course", async () => {
-    const savedInstructor = await userModel.findOne({ email: instructor.email });
-
-    const course = new courseModel({
-      title: "Test Course",
-      description: "Test Course description",
-      instructor: savedInstructor._id,
-      components: [],
-      currentComponent: 1,
-      credentialEarned: false
-    });
-
+  test("should not insert a course with an invalid currentComponent", async () => {
+    const badCourse = {...newCourse, currentComponent: newCourse.components.length + 1};
+    const course = new courseModel(badCourse);
     await expect(course.save()).rejects.toThrow(
-      /Component length must be atleast 0 and no greater than 0/
+      /courses validation failed: currentComponent:/
     );
   });
 });
