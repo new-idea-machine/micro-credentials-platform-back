@@ -129,7 +129,7 @@ describe("Assessment: Insert", () => {
       currentQuestion: 3
     });
     await expect(assessment.save()).rejects.toThrow(
-      /assessments validation failed: currentQuestion:/
+      /The index of the current question must be at least 0 and less than /
     );
   });
 
@@ -137,7 +137,7 @@ describe("Assessment: Insert", () => {
     const question = { ...question1, options: ["Paris"] };
     const assessment = new assessmentModel({ ...newAssessment, questions: [question, question2] });
     await expect(assessment.save()).rejects.toThrow(
-      /assessments validation failed: questions\.0\.options/
+      /There must be at least 2 options and no more than 26 options/
     );
   });
 
@@ -145,7 +145,7 @@ describe("Assessment: Insert", () => {
     const question = { ...question1, answer: -1 };
     const assessment = new assessmentModel({ ...newAssessment, questions: [question, question2] });
     await expect(assessment.save()).rejects.toThrow(
-      /assessments validation failed: questions\.0\.answer:/
+      /The index of the answer must be at least 0 and less than /
     );
   });
 
@@ -300,7 +300,7 @@ describe("Course: Insert", () => {
     const badCourse = {...newCourse, currentComponent: newCourse.components.length + 1};
     const course = new courseModel(badCourse);
     await expect(course.save()).rejects.toThrow(
-      /courses validation failed: currentComponent:/
+      /The index of the current component must be at least 0 and no greater than /
     );
   });
 });

@@ -32,9 +32,11 @@ const BCRYPT_NUM_SALT_ROUNDS = 10;
 dotenv.config();
 
 const connectionString = process.env.MONGO_URL;
-const database = await mongoose.connect(connectionString);
 
+await mongoose.connect(connectionString);
 console.log(`Connected to ${connectionString}`);
+
+const database = mongoose.connection;
 
 /**
  * Learner data schema.
@@ -43,10 +45,10 @@ console.log(`Connected to ${connectionString}`);
  * @property {Array<ObjectId>} courses - References to Course documents that the learner is
  * enrolled in.
  */
-const learnerSchema = new mongoose.Schema({
+const learnerDataSchema = new mongoose.Schema({
   _id: false,
-   courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
- });
+  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "Course", required: true }
+});
 
 /**
  * Instructor data schema.
@@ -54,10 +56,10 @@ const learnerSchema = new mongoose.Schema({
  * @kind class
  * @property {Array<ObjectId>} courses - References to the instructor's Course documents.
  */
-const instructorSchema = new mongoose.Schema({
+const instructorDataSchema = new mongoose.Schema({
   _id: false,
-   courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
- });
+  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "Course", required: true }
+});
 
 /**
  * User schema for the database.
@@ -74,8 +76,8 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  learnerData: { type: learnerSchema, required: true },
-  instructorData: { type: instructorSchema }
+  learnerData: { type: learnerDataSchema, required: true },
+  instructorData: { type: instructorDataSchema }
 });
 
 /**
@@ -112,78 +114,13 @@ userSchema.pre(
   /*
   If a document's ".password" member has been modified then encrypt it before storing it in the
   database.
-
-  @param {!function} next - The function that invokes subsequent middleware.
   */
-  async function (next) {
-    console.assert(typeof next === "function");
-
+  async function () {
     if (this.isModified("password")) {
-      try {
       const salt = await bcrypt.genSalt(BCRYPT_NUM_SALT_ROUNDS);
       this.password = await bcrypt.hash(this.password, salt);
-
-        next();
-      } catch (error) {
-        next(error);
-  }
-    } else {
-      next();
     }
   }
-);
-
-/**
- * Question schema for the database.
- *
- * @kind class
- * @property {string} question - The text of the question.
- * @property {Array<string>} options - Array of possible answers (2-26 options).
- * @property {number} [answer] - Index of learner's answer (required for learners, not for
- * instructors).
- * @property {number} correctOption - Index of the correct option.
- * @property {string} explanation - Explanation of the correct answer.
- * @property {Date} creationTime - When this question was created.
- * @property {Date} updateTime - When this question was last updated.
- */
-const questionSchema = new mongoose.Schema(
-  {
-    _id: false,
-    question: { type: String, required: true },
-    options: {
-      type: [String],
-      required: true,
-      validate: {
-        validator: function (options) {
-          return options.length >= 2 && options.length <= 26;
-        },
-        message: "There must be between 2 and 26 options"
-      }
-    },
-    answer: {
-      type: Number,
-      validate: {
-        validator: function (answer) {
-          return answer >= 0 && answer < this.options.length;
-        },
-        message:
-          "The index of the answer must be at least 0 and less than the number of options"
-      }
-    },
-    correctOption: {
-      type: Number,
-      required: true,
-      validate: {
-        validator: function (correctOption) {
-          return correctOption >= 0 && correctOption < this.options.length;
-        },
-        message:
-          "The index of the correct option must be at least 0 and less than the number of options"
-      }
-    },
-    explanation: { type: String, required: true }
-  },
-  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
 );
 
 /**
@@ -208,8 +145,8 @@ const moduleSchema = new mongoose.Schema(
     description: { type: String, required: true },
     type: {
       type: String,
-    required: true,
-    enum: ["Audio", "Video", "Markdown"]
+      required: true,
+      enum: ["Audio", "Video", "Markdown"]
     },
     chapters: {
       type: [
@@ -234,15 +171,58 @@ const moduleSchema = new mongoose.Schema(
   { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
 );
 
-moduleSchema.pre("validate", function (next) {
+moduleSchema.pre("validate", function () {
   //Checks for chapters: This field will only be present if the "type" field is Audio or Video
   if ((this.type === "Audio" || this.type === "Video") && !Array.isArray(this.chapters)) {
     throw new Error("Chapters field is required when type is Audio or Video");
   }
-  if ((this.type === "Markdown") && (this.chapters !== undefined)) {
+  if (this.type === "Markdown" && this.chapters !== undefined) {
     throw new Error("Chapters field cannot be present when type is Markdown");
   }
-  next();
+});
+
+/**
+ * Question schema for the database.
+ *
+ * @kind class
+ * @property {string} question - The text of the question.
+ * @property {Array<string>} options - Array of possible answers (2-26 options).
+ * @property {number} [answer] - Index of learner's answer (required for learners, not for
+ * instructors).
+ * @property {number} correctOption - Index of the correct option.
+ * @property {string} explanation - Explanation of the correct answer.
+ * @property {Date} creationTime - When this question was created.
+ * @property {Date} updateTime - When this question was last updated.
+ */
+const questionSchema = new mongoose.Schema(
+  {
+    _id: false,
+    question: { type: String, required: true },
+    options: { type: [String], required: true },
+    answer: Number,
+    correctOption: { type: Number, required: true },
+    explanation: { type: String, required: true }
+  },
+  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
+);
+
+questionSchema.pre("validate", function () {
+  if (this.options.length < 2 || this.options.length > 26) {
+    throw new Error("There must be at least 2 options and no more than 26 options");
+  }
+  if (this.correctOption < 0 || this.correctOption >= this.options.length) {
+    throw new Error(
+      "The index of the correct option must be at least 0 and less than the number of options"
+    );
+  }
+  if (
+    typeof this.answer === "number" &&
+    (this.answer < 0 || this.answer >= this.options.length)
+  ) {
+    throw new Error(
+      "The index of the answer must be at least 0 and less than the number of options"
+    );
+  }
 });
 
 /**
@@ -260,19 +240,24 @@ const assessmentSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     questions: { type: [questionSchema], required: true },
-    currentQuestion: {
-      type: Number,
-      validate: {
-        validator: function (currentQuestion) {
-          return currentQuestion >= 0 && currentQuestion < this.questions.length;
-        },
-        message:
-          "The index of the current question must be at least 0 and less than the number of questions"
-      }
-    }
+    currentQuestion: Number
   },
   { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
 );
+
+assessmentSchema.pre("validate", function () {
+  if (this.questions.length === 0) {
+    throw new Error("At least one question is required");
+  }
+  if (
+    typeof this.currentQuestion === "number" &&
+    (this.currentQuestion < 0 || this.currentQuestion >= this.questions.length)
+  ) {
+    throw new Error(
+      "The index of the current question must be at least 0 and less than the number of questions"
+    );
+  }
+});
 
 /**
  * Component reference schema for courses.
@@ -283,23 +268,21 @@ const assessmentSchema = new mongoose.Schema(
  * @property {ObjectId} componentId - Reference to the Module or Assessment document.
  * @property {boolean} [completed] - Whether or not a learner has completed this component.
  */
-const componentRefSchema = new mongoose.Schema(
-  {
-    _id: false,
-    componentType: {
-      type: String,
-      required: true,
-      enum: ["Module", "Assessment"]
-    },
-    componentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      refPath: "components.componentType"
-    },
-    // Learner-specific fields
-    completed: { type: Boolean, default: false }
-  }
-);
+const componentRefSchema = new mongoose.Schema({
+  _id: false,
+  componentType: {
+    type: String,
+    required: true,
+    enum: ["Module", "Assessment"]
+  },
+  componentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    refPath: "components.componentType"
+  },
+  // Learner-specific fields
+  completed: { type: Boolean, default: false }
+});
 
 /**
  * Course schema for the database.
@@ -320,22 +303,24 @@ const courseSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
-    instructor: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
+    instructor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     components: [componentRefSchema],
-    currentComponent: {
-      type: Number,
-      validate: {
-        validator: function (currentComponent) {
-          return currentComponent >= 0 && currentComponent <= this.components.length;
-        },
-        message:
-          "The index of the current component must be at least 0 and no greater than the number of components"
-      }
-    },
+    currentComponent: Number,
     credentialEarned: Boolean
   },
   { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
 );
+
+courseSchema.pre("validate", function () {
+  if (
+    typeof this.currentComponent === "number" &&
+    (this.currentComponent < 0 || this.currentComponent > this.components.length)
+  ) {
+    throw new Error(
+      "The index of the current component must be at least 0 and no greater than the number of components"
+    );
+  }
+});
 
 /**
  * File schema for the database.
@@ -359,17 +344,17 @@ const fileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const userModel = mongoose.model("users", userSchema);
-const moduleModel = mongoose.model("modules", moduleSchema);
-const assessmentModel = mongoose.model("assessments", assessmentSchema);
-const courseModel = mongoose.model("courses", courseSchema);
-const fileModel = mongoose.model("files", fileSchema);
+const userModel = mongoose.model("User", userSchema);
+const moduleModel = mongoose.model("Module", moduleSchema);
+const assessmentModel = mongoose.model("Assessment", assessmentSchema);
+const courseModel = mongoose.model("Course", courseSchema);
+const fileModel = mongoose.model("File", fileSchema);
 
 export {
   database,
   userSchema,
-  learnerSchema,
-  instructorSchema,
+  learnerDataSchema,
+  instructorDataSchema,
   moduleSchema,
   questionSchema,
   assessmentSchema,

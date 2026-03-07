@@ -1,5 +1,5 @@
 import fs from "fs";
-import { userModel, learnerSchema, instructorSchema, fileModel } from "./model.js";
+import { userModel, learnerDataSchema, instructorDataSchema, fileModel } from "./model.js";
 import { uploadFileToGoogleDrive, deleteFileFromGoogleDrive } from "./googleDrive.js";
 
 async function getAll() {
@@ -17,8 +17,8 @@ async function create(user) {
     username: user.userInfo.name,
     email: user.userInfo.email,
     password: user.password,
-    learnerData: new learnerSchema({}),
-    instructorData: user.isInstructor ? new instructorSchema({}) : null
+    learnerData: new learnerDataSchema({}),
+    instructorData: user.isInstructor ? new instructorDataSchema({}) : null
   });
   const newDocument = await registrant.save();
   return { userUID: newDocument._id };
