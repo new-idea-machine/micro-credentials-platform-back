@@ -44,7 +44,7 @@ async function get(req, res) {
     res.status(401).send();
   } else {
     try {
-      const user = await userModel.findOne({ email: req.userUid }).lean();
+      const user = await userModel.findById(req.userUid).lean();
       if (!user) {
         res.status(404).send();
       } else {
@@ -75,19 +75,18 @@ async function getAuth(req, res) {
     res.status(401).send();
   } else {
     try {
-      const user = await userModel.findOne({ email: req.userId }).lean();
+      const user = await userModel.findOne({ email: req.userId });
       if (!user) {
         res.status(404).send();
       }
       // Compares the provided password with the stored hashed password
-      const userRecord = await userModel.findById(user._id);
-      const passwordsMatch = await userRecord.passwordMatches(req.password);
+      const passwordsMatch = await user.passwordMatches(req.password);
 
       if (!passwordsMatch) {
         res.setHeader("WWW-Authenticate", 'Basic realm="user"');
         res.status(401).send();
       } else {
-        const access_token = generateToken(req.userId);
+        const access_token = generateToken(user._id);
         res.status(200).json({
           access_token,
           token_type: "Bearer",
@@ -132,7 +131,7 @@ async function create(req, res) {
     });
     try {
       const newDocument = await registrant.save();
-      const access_token = generateToken(req.userId);
+      const access_token = generateToken(newDocument._id);
       res.status(201).json({
         access_token,
         token_type: "Bearer",
@@ -172,7 +171,7 @@ async function update(req, res) {
   } else {
     try {
       const user = await userModel
-        .findOneAndUpdate({ email: req.userUid }, req.body, { new: true })
+        .findByIdAndUpdate(req.userUid, req.body, { new: true })
         .lean();
       if (!user) {
         res.status(406).send();
