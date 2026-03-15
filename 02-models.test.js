@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { assessmentModel,
+import { database,
+  assessmentModel,
   courseModel,
   moduleModel,
   userModel } from "./src/model.js";
@@ -12,18 +13,23 @@ dotenv.config();
 const MONGO_URL = process.env.MONGO_URL;
 
 beforeAll(async () => {
-  try {
-    // Connect to MongoDB before evaluating the test cases
-    await mongoose.connect(MONGO_URL);
-  } catch (error) {
-    console.log("Error connecting: ", error);
+  const MONGODB_CONNECTED = 1;
+  if (database.readyState !== MONGODB_CONNECTED) {
+    try {
+      await mongoose.connect(MONGO_URL);
+      database = mongoose.connection;
+      console.log("Connected to MongoDB for testing");
+    } catch (error) {
+      console.error("Failed to connect to MongoDB:", error.message);
+      throw error; // Fail the test suite if connection fails
+    }
   }
 });
 
 afterAll(async () => {
   try {
     // Close the MongoDB connection
-    await mongoose.connection.close();
+    await database.close();
   } catch (error) {
     console.log("Error closing connection: ", error);
   }
@@ -46,38 +52,37 @@ describe("Modules: Insert", () => {
     completed: false
   };
 
-  test("should not insert a Video module with missing Chapters key", async () => {
+  test("should not validate a Video module with missing Chapters key", async () => {
     // Removing chapters from the module
     const badModule = structuredClone(newModule);
     badModule.type = "Video";
     delete badModule.chapters;
     const module = new moduleModel(badModule);
-    await expect(module.save()).rejects.toThrow(/Chapters field/);
+    await expect(module.validate()).rejects.toThrow(/Chapters field/);
   });
 
-  test("should not insert an Audio module with missing Chapters key", async () => {
+  test("should not validate an Audio module with missing Chapters key", async () => {
     // Removing chapters from the module
     const badModule = structuredClone(newModule);
     delete badModule.chapters;
     const module = new moduleModel(badModule);
-    await expect(module.save()).rejects.toThrow(/Chapters field/);
+    await expect(module.validate()).rejects.toThrow(/Chapters field/);
   });
 
-  test("should not insert a Markdown module with Chapters", async () => {
+  test("should not validate a Markdown module with Chapters", async () => {
     const badModule = structuredClone(newModule);
     badModule.type = "Markdown";
     const module = new moduleModel(badModule);
-    await expect(module.save()).rejects.toThrow(/Chapters field cannot be present/);
+    await expect(module.validate()).rejects.toThrow(/Chapters field cannot be present/);
   });
 
-  test("should insert a new Markdown module with no Chapters", async () => {
+  test("should validate a new Markdown module with no Chapters", async () => {
     const markdownModule = structuredClone(newModule);
     markdownModule.type = "Markdown";
     delete markdownModule.chapters;
-    const module = await new moduleModel(markdownModule).save();
+    const module = new moduleModel(markdownModule)
+    await expect(module.validate()).resolves;
     expect(module._id).toBeDefined();
-    // Delete the saved module
-    await moduleModel.deleteOne({ _id: module._id });
   });
 
   test("should insert a new Audio module", async () => {
@@ -102,7 +107,7 @@ describe("Modules: Insert", () => {
 /*================================================================
 Assessment model tests
 ================================================================*/
-describe("Assessment: Insert", () => {
+describe("Assessment: Validate", () => {
   const question1 = {
     question: "What is the capital of France?",
     options: ["Paris", "Berlin", "Madrid", "London"],
@@ -123,28 +128,28 @@ describe("Assessment: Insert", () => {
     currentQuestion: 1
   };
 
-  test("should not insert an assessment with current question out of bounds", async () => {
+  test("should not validate an assessment with current question out of bounds", async () => {
     const assessment = new assessmentModel({
       ...newAssessment,
       currentQuestion: 3
     });
-    await expect(assessment.save()).rejects.toThrow(
+    await expect(assessment.validate()).rejects.toThrow(
       /The index of the current question must be at least 0 and less than /
     );
   });
 
-  test("should not insert a question with less than 2 options", async () => {
+  test("should not validate a question with less than 2 options", async () => {
     const question = { ...question1, options: ["Paris"] };
     const assessment = new assessmentModel({ ...newAssessment, questions: [question, question2] });
-    await expect(assessment.save()).rejects.toThrow(
+    await expect(assessment.validate()).rejects.toThrow(
       /There must be at least 2 options and no more than 26 options/
     );
   });
 
-  test("should not insert a question with answer less than 0", async () => {
+  test("should not validate a question with answer less than 0", async () => {
     const question = { ...question1, answer: -1 };
     const assessment = new assessmentModel({ ...newAssessment, questions: [question, question2] });
-    await expect(assessment.save()).rejects.toThrow(
+    await expect(assessment.validate()).rejects.toThrow(
       /The index of the answer must be at least 0 and less than /
     );
   });
@@ -166,7 +171,7 @@ describe("Assessment: Insert", () => {
 /*================================================================
 User model tests
 ================================================================*/
-describe("User: Insert", () => {
+describe("User: Validate", () => {
   const learner = {
     name: "Test Learner User",
     email: `learner_${Date.now()}@test.user`,
@@ -181,11 +186,6 @@ describe("User: Insert", () => {
     instructorData: { courses: [] }
   };
 
-  afterEach(async () => {
-    await userModel.findOneAndDelete({ email: learner.email });
-    await userModel.findOneAndDelete({ email: instructor.email });
-  });
-
   test("should insert a new learner", async () => {
     const savedLearner = await new userModel(learner).save();
     expect(Object.keys(savedLearner.toObject()).length).toBe(Object.keys(learner).length + 2);
@@ -199,6 +199,9 @@ describe("User: Insert", () => {
     expect(Array.isArray(savedLearner.learnerData.courses)).toBe(true);
     expect(savedLearner.learnerData.courses.length).toBe(learner.learnerData.courses.length);
     expect(savedLearner.instructorData).not.toBeDefined();
+
+    // Delete the saved learner
+    await userModel.deleteOne(savedLearner._id);
   });
 
   test("should insert a new instructor", async () => {
@@ -218,13 +221,16 @@ describe("User: Insert", () => {
     expect(savedInstructor.instructorData.courses).toBeDefined();
     expect(Array.isArray(savedInstructor.instructorData.courses)).toBe(true);
     expect(savedInstructor.instructorData.courses.length).toBe(instructor.instructorData.courses.length);
+
+    // Delete the saved instructor
+    await userModel.deleteOne(savedInstructor._id);
   });
 });
 
 /*================================================================
 Course model tests
 ================================================================*/
-describe("Course: Insert", () => {
+describe("Course: Validate", () => {
   const module = {
     title: "Test Module",
     description: "This is a test module",
@@ -258,23 +264,46 @@ describe("Course: Insert", () => {
     currentQuestion: 1
   };
 
+  const instructor = {
+    name: "Test Instructor User",
+    email: `instructor_${Date.now()}@test.user`,
+    password: "123456789",
+    learnerData: { courses: [] },
+    instructorData: { courses: [] }
+  };
+
   const newCourse = {
     title: "Test Course",
     description: "Test Course description",
-    instructor: "0123456789abcdef01234567",
+    instructor: "",
     components: []
   };
 
-  test("should insert a new course", async () => {
-    const savedModule = await new moduleModel(module).save();
-    const savedAssessment = await (new assessmentModel(newAssessment)).save();
-    const component1 = {componentType: "Module", componentId: savedModule._id};
-    const component2 = {componentType: "Assessment", componentId: savedAssessment._id};
+  let savedModule;
+  let savedAssessment;
+  let savedInstructor;
+  let moduleComponent;
+  let assessmentComponent;
 
-    const course = await new courseModel({
-      ...newCourse,
-      components: [component1, component2]
-    }).save();
+  beforeAll(async () => {
+    savedModule = await new moduleModel(module).save();
+    savedAssessment = await new assessmentModel(newAssessment).save();
+    savedInstructor = await new userModel(instructor).save();
+    moduleComponent = {componentType: "Module", componentId: savedModule._id};
+    assessmentComponent = {componentType: "Assessment", componentId: savedAssessment._id};
+    newCourse.instructor = savedInstructor._id.toString();
+    newCourse.components = [moduleComponent, assessmentComponent];
+  });
+
+  afterAll(async () => {
+    await moduleModel.deleteOne(savedModule._id);
+    await assessmentModel.deleteOne(savedAssessment._id);
+    await userModel.deleteOne(savedInstructor._id);
+  });
+
+  test("should insert a new course", async () => {
+
+    const course = await new courseModel(newCourse).save();
 
     expect(course._id).toBeDefined();
     expect(course.title).toBe(newCourse.title);
@@ -285,21 +314,19 @@ describe("Course: Insert", () => {
     expect(course.creationTime).toBeDefined();
     expect(course.updateTime).toBeDefined();
 
-    expect(course.components[0].componentType).toBe(component1.componentType);
+    expect(course.components[0].componentType).toBe(moduleComponent.componentType);
     expect(course.components[0].componentId.toString()).toBe(savedModule._id.toString());
-    expect(course.components[1].componentType).toBe(component2.componentType);
+    expect(course.components[1].componentType).toBe(assessmentComponent.componentType);
     expect(course.components[1].componentId.toString()).toBe(savedAssessment._id.toString());
 
     // Delete the saved course
     await courseModel.findByIdAndDelete(course._id.toString());
-    await assessmentModel.findByIdAndDelete(savedAssessment._id.toString());
-    await moduleModel.findByIdAndDelete(savedModule._id.toString());
   });
 
-  test("should not insert a course with an invalid currentComponent", async () => {
+  test("should not validate a course with an invalid currentComponent", async () => {
     const badCourse = {...newCourse, currentComponent: newCourse.components.length + 1};
     const course = new courseModel(badCourse);
-    await expect(course.save()).rejects.toThrow(
+    await expect(course.validate()).rejects.toThrow(
       /The index of the current component must be at least 0 and no greater than /
     );
   });
