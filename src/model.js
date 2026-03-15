@@ -320,6 +320,10 @@ courseSchema.pre("validate", function () {
       "The index of the current component must be at least 0 and no greater than the number of components"
     );
   }
+
+  if (!Array.isArray(this.components) || this.components.length === 0) {
+    throw new Error("At least one component is required");
+  }
 });
 
 /**

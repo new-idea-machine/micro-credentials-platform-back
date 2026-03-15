@@ -83,6 +83,8 @@ describe("Modules: Insert", () => {
     const module = new moduleModel(markdownModule)
     await expect(module.validate()).resolves;
     expect(module._id).toBeDefined();
+    expect(module.type).toBe("Markdown");
+    expect(module.chapters).toBeUndefined();
   });
 
   test("should insert a new Audio module", async () => {
@@ -128,6 +130,17 @@ describe("Assessment: Validate", () => {
     currentQuestion: 1
   };
 
+  test("should not validate an assessment with no questions", async () => {
+    const assessment = new assessmentModel({
+      title: "Empty Assessment",
+      questions: []
+    });
+
+    await expect(assessment.validate()).rejects.toThrow(
+      /At least one question is required/
+    );
+  });
+
   test("should not validate an assessment with current question out of bounds", async () => {
     const assessment = new assessmentModel({
       ...newAssessment,
@@ -146,11 +159,36 @@ describe("Assessment: Validate", () => {
     );
   });
 
+  test("should not validate a question with more than 26 options", async () => {
+    const badOptions = Array.from({ length: 27 }, (_, i) => `Option ${i + 1}`);
+    const badQuestion1 = { ...question1, options: badOptions };
+    const assessment = new assessmentModel({
+      ...newAssessment,
+      questions: [badQuestion1, question2]
+    });
+
+    await expect(assessment.validate()).rejects.toThrow(
+      /There must be at least 2 options and no more than 26 options/
+    );
+  });
+
   test("should not validate a question with answer less than 0", async () => {
-    const question = { ...question1, answer: -1 };
-    const assessment = new assessmentModel({ ...newAssessment, questions: [question, question2] });
+    const badQuestion = { ...question1, answer: -1 };
+    const assessment = new assessmentModel({ ...newAssessment, questions: [badQuestion, question2] });
     await expect(assessment.validate()).rejects.toThrow(
       /The index of the answer must be at least 0 and less than /
+    );
+  });
+
+  test("should not validate a question with correctOption >= options.length", async () => {
+    const badQuestion = { ...question1, correctOption: 10 }; // Out of bounds
+    const assessment = new assessmentModel({
+      ...newAssessment,
+      questions: [badQuestion, question2]
+    });
+
+    await expect(assessment.validate()).rejects.toThrow(
+      /The index of the correct option must be at least 0 and less than/
     );
   });
 
@@ -193,6 +231,7 @@ describe("User: Validate", () => {
     expect(savedLearner.name).toBe(learner.name);
     expect(savedLearner.email).toBe(learner.email);
     expect(savedLearner.password).toBeDefined();
+    expect(savedLearner.password).not.toBe(learner.password);
     expect(savedLearner.learnerData).toBeDefined();
     expect(Object.keys(savedLearner.toObject().learnerData).length).toBe(Object.keys(learner.learnerData).length);
     expect(savedLearner.learnerData.courses).toBeDefined();
@@ -211,6 +250,7 @@ describe("User: Validate", () => {
     expect(savedInstructor.name).toBe(instructor.name);
     expect(savedInstructor.email).toBe(instructor.email);
     expect(savedInstructor.password).toBeDefined();
+    expect(savedInstructor.password).not.toBe(instructor.password);
     expect(savedInstructor.learnerData).toBeDefined();
     expect(Object.keys(savedInstructor.toObject().learnerData).length).toBe(Object.keys(instructor.learnerData).length);
     expect(savedInstructor.learnerData.courses).toBeDefined();
@@ -321,6 +361,34 @@ describe("Course: Validate", () => {
 
     // Delete the saved course
     await courseModel.findByIdAndDelete(course._id.toString());
+  });
+
+  test("should validate a course with currentComponent = 0", async () => {
+    const course = new courseModel({...newCourse, currentComponent: 0});
+
+    await expect(course.validate()).resolves;
+    expect(course.currentComponent).toBe(0);
+  });
+
+  test("should validate a course with currentComponent = components.length (completed)", async () => {
+    const course = new courseModel({...newCourse, currentComponent: newCourse.components.length});
+
+    await expect(course.validate()).resolves;
+    expect(course.currentComponent).toBe(newCourse.components.length);
+  });
+
+  test("should not validate a course with empty components array", async () => {
+    const badCourse = { ...newCourse, components: [], currentComponent: 0 };
+    const course = new courseModel(badCourse);
+    await expect(course.validate()).rejects.toThrow(/At least one component is required/);
+  });
+
+  test("should not validate a course with non-existent component reference", async () => {
+    const fakeObjectId = new mongoose.Types.ObjectId();
+    const badComponent = { componentType: "Module", componentId: fakeObjectId };
+    const badCourse = { ...courseData, components: [badComponent] };
+    const course = new courseModel(badCourse);
+    await expect(course.validate()).rejects.toThrow();
   });
 
   test("should not validate a course with an invalid currentComponent", async () => {
