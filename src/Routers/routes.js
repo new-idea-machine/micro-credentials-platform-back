@@ -7,7 +7,7 @@ import {
   update,
   getAuth,
   getAllFiles,
-  createFile,
+  uploadFiles,
   // updateFile,
   deleteFile,
   accessGoogleDriveFiles
@@ -30,8 +30,8 @@ router.delete("/user", removeOne);
 //For demoing purpose only and does not represent the final product
 router.get("/files", getAllFiles);
 
-//For demoing purpose only and does not represent the final product
-router.post("/files/upload", createFile);
+// New file upload endpoint
+router.post("/files", uploadFiles);
 
 //For demoing purpose only and does not represent the final product
 //router.patch("/files/:fileID", updateFile);

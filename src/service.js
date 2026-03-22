@@ -33,30 +33,54 @@ async function removeOne() {
   await userModel.deleteMany({});
 }
 
-//For demoing purpose only and does not represent the final product
-//Function to handle the complete process of uploading files and saving metadata
-async function createFile(files) {
-  const savedFiles = [];
-
-  for (const file of files) {
-    const uploadedFile = await uploadFileToGoogleDrive(file);
-
-    //Save file metadata to MongoDB
-    const savedFile = await fileModel.create({
-      filename: uploadedFile.name,
-      driveId: uploadedFile.id,
-      mimeType: uploadedFile.mimeType,
-      webViewLink: uploadedFile.webViewLink
-    });
-
-    //Store the saved file metadata
-    savedFiles.push(savedFile);
-
-    //Delete the file from the server after uploading
-    fs.unlinkSync(file.path);
+/**
+ * Upload files to Google Drive.
+ *
+ * @param {string} userUid - User ID from the request token
+ * @param {Array<object>} files - Array of file objects from Multer
+ * @returns {Promise<Array<string>>} Array of URL's to each file (or null's for any failed file
+ *   transfers)
+ */
+async function uploadFiles(userUid, files) {
+  if (typeof userUid !== "string") {
+    console.error("User ID must be a string");
+    throw new TypeError("User ID must be a string");
   }
 
-  return savedFiles;
+  if (!Array.isArray(files)) {
+    console.error("Files must be an array");
+    throw new TypeError("Files must be an array");
+  }
+
+  if (!files.every(file => typeof file === "object")) {
+    console.error("All files must be objects");
+    throw new TypeError("All files must be objects");
+  }
+
+  const urls = [];
+
+  /*
+  Each file is uploaded to Google Drive and the URL to the file is added to the "urls" array.  If
+  an error occurs during the upload then "null" is added to the "urls" array instead.  Each file is
+  deleted from the file system after it's been processed (successfully or not).
+  */
+
+  for (const file of files) {
+    try {
+      const uploadedFile = await uploadFileToGoogleDrive(userUid, file);
+
+      urls.push(uploadedFile?.webContentLink);
+    } catch (error) {
+      console.error(`Error uploading file ${file.originalname}:`, error);
+      urls.push(null);
+    }
+
+    try {
+      fs.unlinkSync(file.path);
+    } catch {}
+  }
+
+  return urls;
 }
 
 //For demoing purpose only and does not represent the final product
@@ -106,5 +130,5 @@ export {
   getAllFiles,
   // updateFile,
   deleteFile,
-  createFile,
+  uploadFiles,
 };

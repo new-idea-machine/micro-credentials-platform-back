@@ -25,9 +25,9 @@ const upload = multer({ dest: "uploads/" });
  * @param {Object} res - Express response object
  */
 function getAll(req, res) {
-    const connected = 1;
+  const connected = 1;
 
-    res.status(database.readyState === connected ? 200 : 504).send();
+  res.status(database.readyState === connected ? 200 : 504).send();
 }
 
 /**
@@ -63,12 +63,12 @@ async function get(req, res) {
 
 /**
  * Authenticate a user with their credentials and send back an access token.
-  *
+ *
  * @see "GET /auth" in "/openapi.yaml" for details.
  *
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
-*/
+ */
 async function getAuth(req, res) {
   if (!("userId" in req) || !("password" in req)) {
     res.setHeader("WWW-Authenticate", 'Basic realm="user"');
@@ -78,6 +78,7 @@ async function getAuth(req, res) {
       const user = await userModel.findOne({ email: req.userId });
       if (!user) {
         res.status(404).send();
+        return;
       }
       // Compares the provided password with the stored hashed password
       const passwordsMatch = await user.passwordMatches(req.password);
@@ -86,7 +87,7 @@ async function getAuth(req, res) {
         res.setHeader("WWW-Authenticate", 'Basic realm="user"');
         res.status(401).send();
       } else {
-        const access_token = generateToken(user._id);
+        const access_token = generateToken(user._id.toString());
         res.status(200).json({
           access_token,
           token_type: "Bearer",
@@ -131,7 +132,7 @@ async function create(req, res) {
     });
     try {
       const newDocument = await registrant.save();
-      const access_token = generateToken(newDocument._id);
+      const access_token = generateToken(newDocument._id.toString());
       res.status(201).json({
         access_token,
         token_type: "Bearer",
@@ -221,30 +222,69 @@ async function getAllFiles(req, res) {
   }
 }
 
-//For demoing purpose only and does not represent the final product
-async function createFile(req, res) {
-  await upload.array("files")(req, res, async function (err) {
-    if (err) {
-      return res.status(400).send({ message: `File upload failed. ${err}` });
+/**
+ * Upload multiple files to Google Drive
+ *
+ * @see "paths:/files:post" in "/openapi.yaml" for details.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function uploadFiles(req, res) {
+  if (!("userUid" in req)) {
+    res.setHeader("WWW-Authenticate", 'Bearer realm="user"');
+    res.status(401).send();
+    return;
+  }
+
+  try {
+    /*
+    First, the user is checked to ensure that they're an instructor.  Only instructors can upload
+    files.
+    */
+
+    const user = await userModel.findById(req.userUid).lean();
+
+    if (!user) {
+      res.status(401).send();
+      return;
     }
 
-    try {
-      //Call processFiles to handle the uploaded files
-
-      const savedFiles = await service.createFile(req.files);
-
-      //Respond with the saved file metadata
-      res.status(200).json(savedFiles);
-    } catch (err) {
-      res.status(500).send({ message: err.message });
+    if (!user.instructorData) {
+      res.status(403).send();
+      return;
     }
-  });
+
+    /*
+    Next, Multer is used to process the incoming files, then the files are all transferred to the
+    file server and their URL's are returned.  If no files were found in the request or if there
+    was an error transferring the files then an appropriate result code is sent back.
+    */
+
+    await upload.array("files")(req, res, async function (err) {
+      if (err) {
+        res.status(406).send();
+        return;
+      }
+
+      if (req?.files?.length === undefined || req.files.length === 0) {
+        return res.status(406).send();
+      }
+
+      try {
+        const fileUrls = await service.uploadFiles(req.userUid, req.files);
+
+        res.status(201).json(fileUrls);
+      } catch (error) {
+        console.error("Error uploading files:", error);
+        res.status(504).send();
+      }
+    });
+  } catch (error) {
+    console.error("Error uploading files:", error);
+    res.status(504).send();
+  }
 }
-
-//For demoing purpose only and does not represent the final product
-// async function updateFile(req, res) {
-//   service.updateFile(req, res);
-// }
 
 //For demoing purpose only and does not represent the final product
 async function deleteFile(req, res) {
@@ -279,6 +319,80 @@ async function accessGoogleDriveFiles(req, res) {
   }
 }
 
+/**
+ * Create a new course
+ *
+ * @see "POST /courses" in "/openapi.yaml" for details.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function createCourse(req, res) {
+  if (!("userUid" in req)) {
+    res.setHeader("WWW-Authenticate", 'Bearer realm="user"');
+    res.status(401).send();
+
+    return;
+  }
+
+  try {
+    /*
+    First, the user is checked to ensure that they're an instructor.  Only instructors can create
+    courses.
+    */
+
+    const user = await userModel.findById(req.userUid).lean();
+
+    if (!user) {
+      res.status(401).send();
+
+      return;
+    }
+
+    if (!user.instructorData) {
+      res.status(403).send();
+
+      return;
+    }
+
+    /*
+    Next, the course data is validated.  If any required fields are missing or have invalid values
+    then an appropriate error code is returned.
+    */
+
+    const course = req.body;
+
+    if (
+      typeof course?.UID !== "string" ||
+      course.UID !== "" ||
+      typeof course?.instructor !== "string" ||
+      course.instructor !== req.userUid ||
+      typeof course?.title !== "string" ||
+      typeof course?.description !== "string" ||
+      typeof course?.price !== "number" ||
+      course.price < 0 ||
+      typeof course?.duration !== "number" ||
+      course.duration < 0
+    ) {
+      res.status(406).send();
+
+      return;
+    }
+
+    /*
+    TODO:  Call service function to create the course
+
+    const courseUid = await service.createCourse(course);
+    res.status(201).send(courseUid);
+    */
+
+    res.status(501).send(); // Not implemented yet
+  } catch (error) {
+    console.error("Error creating course:", error);
+    res.status(504).send();
+  }
+}
+
 export {
   getAll,
   get,
@@ -287,8 +401,9 @@ export {
   update,
   getAuth,
   getAllFiles,
-  createFile,
+  uploadFiles,
   // updateFile,
   deleteFile,
-  accessGoogleDriveFiles
+  accessGoogleDriveFiles,
+  createCourse
 };
