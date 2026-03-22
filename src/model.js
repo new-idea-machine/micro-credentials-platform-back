@@ -17,6 +17,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 
+const MONGODB_CONNECTED = 1;
+
 /**
  * The cost of processing the data for generating a hash.
  *
@@ -278,7 +280,38 @@ const componentRefSchema = new mongoose.Schema({
   componentId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    refPath: "components.componentType"
+    refPath: "components.componentType",
+    validate: {
+      validator: async function (value) {
+        // Skip validation if database connection is closed
+
+        if (database.readyState !== MONGODB_CONNECTED) {
+          return true;
+        }
+
+        // Determine which model to check based on componentType
+
+        const componentType = this.componentType;
+
+        try {
+          if (componentType === "Module") {
+            return (await mongoose.model("Module").exists({ _id: value })) !== null;
+          } else if (componentType === "Assessment") {
+            return (await mongoose.model("Assessment").exists({ _id: value })) !== null;
+          }
+        } catch (error) {
+          // If there's an error (e.g., connection closed), skip validation
+
+          if (error.name === "MongoNotConnectedError") {
+            return true;
+          }
+          throw error;
+        }
+
+        return false;
+      },
+      message: (props) => `Referenced component with ID ${props.value} does not exist`
+    }
   },
   // Learner-specific fields
   completed: { type: Boolean, default: false }
@@ -311,7 +344,8 @@ const courseSchema = new mongoose.Schema(
   { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
 );
 
-courseSchema.pre("validate", function () {
+courseSchema.pre("validate", async function () {
+  // Validate currentComponent index
   if (
     typeof this.currentComponent === "number" &&
     (this.currentComponent < 0 || this.currentComponent > this.components.length)
@@ -321,8 +355,90 @@ courseSchema.pre("validate", function () {
     );
   }
 
+  // Validate components array
   if (!Array.isArray(this.components) || this.components.length === 0) {
     throw new Error("At least one component is required");
+  }
+
+  /**
+   * Check to see if a document exists in a specific collection (using ID and model name) in the
+   * database.
+   *
+   * This function verifies the database connection state before attempting to query for the
+   * document's existence. If the database connection is closed or closing, this function
+   * cannot make any determination and returns `undefined`.
+   *
+   * @async
+   * @function documentExists
+   * @inner
+   * @param {string} modelName - The name of the Mongoose model to search (e.g., "User", "Module",
+   * "Assessment")
+   * @param {mongoose.Types.ObjectId|string} documentId - The unique identifier of the document to
+   * check
+   * @returns {Promise<boolean|undefined>} Returns:
+   *   - `true` if the document exists in the database
+   *   - `false` if the document does not exist in the database
+   *   - `undefined` if the database connection is not active or a connection error occurred
+   * @throws {Error} Re-throws any errors that are not `MongoNotConnectedError`
+   *
+   * @example
+   * // Check if a user exists and handle all cases
+   *
+   * const exists = await documentExists("User", userId);
+   *
+   * if (exists === false) {
+   *   throw new Error(`User ${userId} not found`);
+   * } else if (exists === undefined) {
+   *   // Database not connected - skip validation or handle appropriately
+   *
+   *   console.warn("Cannot validate user existence -- database not connected");
+   * }
+   *
+   * // If exists === true, validation passes
+   *
+   * @example
+   * // Check if a module exists
+   *
+   * const moduleExists = await documentExists("Module", moduleId);
+   *
+   * if (moduleExists === false) {
+   *   throw new Error(`Module ${moduleId} not found`);
+   * }
+   */
+  async function documentExists(modelName, documentId) {
+    let documentExists = undefined;
+
+    if (database.readyState === MONGODB_CONNECTED) {
+      try {
+        const model = mongoose.model(modelName);
+
+        documentExists = (await model.exists({ _id: documentId })) !== null;
+      } catch (error) {
+        // Skip validation if connection is closed
+
+        if (error.name !== "MongoNotConnectedError") {
+          throw error;
+        }
+      }
+    }
+
+    return documentExists;
+  }
+
+  // Validate instructor reference
+  if ((await documentExists("User", this.instructor)) === false) {
+    throw new Error(`Instructor with ID ${this.instructor} does not exist`);
+  }
+
+  // Validate component references
+  for (const component of this.components) {
+    const { componentType, componentId } = component;
+
+    if ((await documentExists(componentType, componentId)) === false) {
+      throw new Error(
+        `Referenced "${componentType}" component with ID ${componentId} does not exist`
+      );
+    }
   }
 });
 

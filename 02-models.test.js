@@ -1,8 +1,11 @@
+import crypto from "crypto";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { database, assessmentModel, courseModel, moduleModel, userModel } from "./src/model.js";
 
 // Data for testing
+
+const testsCleanupWaitPeriod = 500;  // 0.5 seconds
 
 const moduleData = {
   title: "Test Module",
@@ -41,15 +44,15 @@ const assessmentData = {
 
 const learnerData = {
   name: "Test Learner User",
-  email: `learner_${Date.now()}@test.user`,
-  password: "123456789",
+  email: `learner_${crypto.randomUUID()}@test.user`,
+  password: "tEst^U$er123",
   learnerData: { courses: [] }
 };
 
 const instructorData = {
   name: "Test Instructor User",
-  email: `instructor_${Date.now()}@test.user`,
-  password: "123456789",
+  email: `instructor_${crypto.randomUUID()}@test.user`,
+  password: "tEst^U$er456",
   learnerData: { courses: [] },
   instructorData: { courses: [] }
 };
@@ -76,6 +79,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   try {
+    // Wait for pending operations to finish
+    await new Promise((resolve) => setTimeout(resolve, testsCleanupWaitPeriod));
+
     // Close the MongoDB connection
     await database.close();
   } catch (error) {
@@ -122,19 +128,21 @@ describe("Modules: Insert", () => {
   test("should insert a new Audio module", async () => {
     const module = await new moduleModel(moduleData).save();
 
-    expect(module._id).toBeDefined();
-    expect(module.title).toBe("Test Module");
-    expect(module.description).toBe("This is a test module");
-    expect(module.type).toBe("Audio");
-    expect(module.chapters.length).toBe(2);
-    expect(module.url).toBe("https://example.com/test-module");
-    expect(module.urlAuthentication).toHaveProperty("scheme");
-    expect(module.urlAuthentication).toHaveProperty("parameters");
-    expect(module.completed).toBe(false);
-    expect(module.creationTime).toBeDefined();
-
-    // Delete the saved module
-    await moduleModel.deleteOne({ _id: module._id });
+    try {
+      expect(module._id).toBeDefined();
+      expect(module.title).toBe("Test Module");
+      expect(module.description).toBe("This is a test module");
+      expect(module.type).toBe("Audio");
+      expect(module.chapters.length).toBe(2);
+      expect(module.url).toBe("https://example.com/test-module");
+      expect(module.urlAuthentication).toHaveProperty("scheme");
+      expect(module.urlAuthentication).toHaveProperty("parameters");
+      expect(module.completed).toBe(false);
+      expect(module.creationTime).toBeDefined();
+    } finally {
+      // Delete the saved module
+      await moduleModel.deleteOne({ _id: module._id });
+    }
   });
 });
 
@@ -206,14 +214,16 @@ describe("Assessment: Validate", () => {
   test("should insert an assessment", async () => {
     const assessment = await new assessmentModel(assessmentData).save();
 
-    expect(assessment._id).toBeDefined();
-    expect(assessment.title).toBe(assessmentData.title);
-    expect(assessment.questions.length).toBe(2);
-    expect(assessment.currentQuestion).toBe(1);
-    expect(assessment.creationTime).toBeDefined();
-
-    // Delete the saved questions and assessment
-    await assessmentModel.deleteOne(assessment._id);
+    try {
+      expect(assessment._id).toBeDefined();
+      expect(assessment.title).toBe(assessmentData.title);
+      expect(assessment.questions.length).toBe(2);
+      expect(assessment.currentQuestion).toBe(1);
+      expect(assessment.creationTime).toBeDefined();
+    } finally {
+      // Delete the saved questions and assessment
+      await assessmentModel.deleteOne({ _id: assessment._id });
+    }
   });
 });
 
@@ -224,53 +234,57 @@ describe("User: Validate", () => {
   test("should insert a new learner", async () => {
     const user = await new userModel(learnerData).save();
 
-    expect(Object.keys(user.toObject()).length).toBe(Object.keys(learnerData).length + 2);
-    expect(user._id).toBeDefined();
-    expect(user.name).toBe(learnerData.name);
-    expect(user.email).toBe(learnerData.email);
-    expect(user.password).toBeDefined();
-    expect(user.learnerData).toBeDefined();
-    expect(user.password).not.toBe(learnerData.password);
-    expect(Object.keys(user.toObject().learnerData).length).toBe(
-      Object.keys(learnerData.learnerData).length
-    );
-    expect(user.learnerData.courses).toBeDefined();
-    expect(Array.isArray(user.learnerData.courses)).toBe(true);
-    expect(user.learnerData.courses.length).toBe(learnerData.learnerData.courses.length);
-    expect(user.instructorData).not.toBeDefined();
-
-    // Delete the saved learner
-    await userModel.deleteOne(user._id);
+    try {
+      expect(Object.keys(user.toObject()).length).toBe(Object.keys(learnerData).length + 2);
+      expect(user._id).toBeDefined();
+      expect(user.name).toBe(learnerData.name);
+      expect(user.email).toBe(learnerData.email);
+      expect(user.password).toBeDefined();
+      expect(user.learnerData).toBeDefined();
+      expect(user.password).not.toBe(learnerData.password);
+      expect(Object.keys(user.toObject().learnerData).length).toBe(
+        Object.keys(learnerData.learnerData).length
+      );
+      expect(user.learnerData.courses).toBeDefined();
+      expect(Array.isArray(user.learnerData.courses)).toBe(true);
+      expect(user.learnerData.courses.length).toBe(learnerData.learnerData.courses.length);
+      expect(user.instructorData).not.toBeDefined();
+    } finally {
+      // Delete the saved learner
+      await userModel.deleteOne({ _id: user._id });
+    }
   });
 
   test("should insert a new instructor", async () => {
     const user = await new userModel(instructorData).save();
 
-    expect(Object.keys(user.toObject()).length).toBe(Object.keys(instructorData).length + 2);
-    expect(user._id).toBeDefined();
-    expect(user.name).toBe(instructorData.name);
-    expect(user.email).toBe(instructorData.email);
-    expect(user.password).toBeDefined();
-    expect(user.learnerData).toBeDefined();
-    expect(user.password).not.toBe(instructorData.password);
-    expect(Object.keys(user.toObject().learnerData).length).toBe(
-      Object.keys(instructorData.learnerData).length
-    );
-    expect(user.learnerData.courses).toBeDefined();
-    expect(Array.isArray(user.learnerData.courses)).toBe(true);
-    expect(user.learnerData.courses.length).toBe(learnerData.learnerData.courses.length);
-    expect(user.instructorData).toBeDefined();
-    expect(Object.keys(user.toObject().instructorData).length).toBe(
-      Object.keys(instructorData.instructorData).length
-    );
-    expect(user.instructorData.courses).toBeDefined();
-    expect(Array.isArray(user.instructorData.courses)).toBe(true);
-    expect(user.instructorData.courses.length).toBe(
-      instructorData.instructorData.courses.length
-    );
-
-    // Delete the saved instructor
-    await userModel.deleteOne(user._id);
+    try {
+      expect(Object.keys(user.toObject()).length).toBe(Object.keys(instructorData).length + 2);
+      expect(user._id).toBeDefined();
+      expect(user.name).toBe(instructorData.name);
+      expect(user.email).toBe(instructorData.email);
+      expect(user.password).toBeDefined();
+      expect(user.learnerData).toBeDefined();
+      expect(user.password).not.toBe(instructorData.password);
+      expect(Object.keys(user.toObject().learnerData).length).toBe(
+        Object.keys(instructorData.learnerData).length
+      );
+      expect(user.learnerData.courses).toBeDefined();
+      expect(Array.isArray(user.learnerData.courses)).toBe(true);
+      expect(user.learnerData.courses.length).toBe(learnerData.learnerData.courses.length);
+      expect(user.instructorData).toBeDefined();
+      expect(Object.keys(user.toObject().instructorData).length).toBe(
+        Object.keys(instructorData.instructorData).length
+      );
+      expect(user.instructorData.courses).toBeDefined();
+      expect(Array.isArray(user.instructorData.courses)).toBe(true);
+      expect(user.instructorData.courses.length).toBe(
+        instructorData.instructorData.courses.length
+      );
+    } finally {
+      // Delete the saved instructor
+      await userModel.deleteOne({ _id: user._id });
+    }
   });
 });
 
@@ -292,40 +306,55 @@ describe("Course: Validate", () => {
   let assessmentComponentData;
 
   beforeAll(async () => {
-    module = await new moduleModel(moduleData).save();
-    assessment = await new assessmentModel(assessmentData).save();
-    instructor = await new userModel(instructorData).save();
-    moduleComponentData = { componentType: "Module", componentId: module._id };
-    assessmentComponentData = { componentType: "Assessment", componentId: assessment._id };
-    courseData.instructor = instructor._id.toString();
-    courseData.components = [moduleComponentData, assessmentComponentData];
+    try {
+      module = await new moduleModel(moduleData).save();
+      assessment = await new assessmentModel(assessmentData).save();
+      instructor = await new userModel(instructorData).save();
+      moduleComponentData = { componentType: "Module", componentId: module._id };
+      assessmentComponentData = { componentType: "Assessment", componentId: assessment._id };
+      courseData.instructor = instructor._id.toString();
+      courseData.components = [moduleComponentData, assessmentComponentData];
+    } catch (error) {
+      console.error("Error setting up test course data:", error);
+      throw error;
+    }
   });
 
   afterAll(async () => {
-    await moduleModel.deleteOne(module._id);
-    await assessmentModel.deleteOne(assessment._id);
-    await userModel.deleteOne(instructor._id);
+    // Wait for pending operations to finish
+    await new Promise((resolve) => setTimeout(resolve, testsCleanupWaitPeriod));
+
+    // Delete the saved components, assessment, and module
+    try {
+      await moduleModel.deleteOne({ _id: module._id });
+      await assessmentModel.deleteOne({ _id: assessment._id });
+      await userModel.deleteOne({ _id: instructor._id });
+    } catch (error) {
+      console.log("Error cleaning up test data:", error);
+    }
   });
 
   test("should insert a new course", async () => {
     const course = await new courseModel(courseData).save();
 
-    expect(course._id).toBeDefined();
-    expect(course.title).toBe(courseData.title);
-    expect(course.instructor.toString()).toBe(courseData.instructor);
-    expect(course.components.length).toBe(2);
-    expect(course.currentComponent).toBe(courseData.currentComponent);
-    expect(course.credentialEarned).toBe(courseData.credentialEarned);
-    expect(course.creationTime).toBeDefined();
-    expect(course.updateTime).toBeDefined();
+    try {
+      expect(course._id).toBeDefined();
+      expect(course.title).toBe(courseData.title);
+      expect(course.instructor.toString()).toBe(courseData.instructor);
+      expect(course.components.length).toBe(2);
+      expect(course.currentComponent).toBe(courseData.currentComponent);
+      expect(course.credentialEarned).toBe(courseData.credentialEarned);
+      expect(course.creationTime).toBeDefined();
+      expect(course.updateTime).toBeDefined();
 
-    expect(course.components[0].componentType).toBe(moduleComponentData.componentType);
-    expect(course.components[0].componentId.toString()).toBe(module._id.toString());
-    expect(course.components[1].componentType).toBe(assessmentComponentData.componentType);
-    expect(course.components[1].componentId.toString()).toBe(assessment._id.toString());
-
-    // Delete the saved course
-    await courseModel.deleteOne(course._id);
+      expect(course.components[0].componentType).toBe(moduleComponentData.componentType);
+      expect(course.components[0].componentId.toString()).toBe(module._id.toString());
+      expect(course.components[1].componentType).toBe(assessmentComponentData.componentType);
+      expect(course.components[1].componentId.toString()).toBe(assessment._id.toString());
+    } finally {
+      // Delete the saved course
+      await courseModel.deleteOne({ _id: course._id });
+    }
   });
 
   test("should validate a course with currentComponent = 0", async () => {
