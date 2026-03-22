@@ -9,10 +9,10 @@
 
 import validator from "validator";
 import multer from "multer";
-import { database, userModel } from "./model.js";
-import { generateToken } from "../tokenManager.js";
-import * as service from "./service.js";
-import * as googleDrive from "./googleDrive.js";
+import { database, userModel } from "../model.js";
+import { generateToken } from "../../tokenManager.js";
+import * as service from "../service.js";
+import * as googleDrive from "../googleDrive.js";
 
 const upload = multer({ dest: "uploads/" });
 
@@ -25,9 +25,9 @@ const upload = multer({ dest: "uploads/" });
  * @param {Object} res - Express response object
  */
 function getAll(req, res) {
-    const connected = 1;
+  const connected = 1;
 
-    res.status(database.readyState === connected ? 200 : 504).send();
+  res.status(database.readyState === connected ? 200 : 504).send();
 }
 
 /**
@@ -44,7 +44,7 @@ async function get(req, res) {
     res.status(401).send();
   } else {
     try {
-      const user = await userModel.findOne({ email: req.userUid }).lean();
+      const user = await userModel.findById(req.userUid).lean();
       if (!user) {
         res.status(404).send();
       } else {
@@ -63,26 +63,25 @@ async function get(req, res) {
 
 /**
  * Authenticate a user with their credentials and send back an access token.
-  *
+ *
  * @see "GET /auth" in "/openapi.yaml" for details.
  *
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
-*/
+ */
 async function getAuth(req, res) {
   if (!("userId" in req) || !("password" in req)) {
     res.setHeader("WWW-Authenticate", 'Basic realm="user"');
     res.status(401).send();
   } else {
     try {
-      const user = await userModel.findOne({ email: req.userId }).lean();
+      const user = await userModel.findOne({ email: req.userId });
       if (!user) {
         res.status(404).send();
         return;
       }
       // Compares the provided password with the stored hashed password
-      const userRecord = await userModel.findById(user._id);
-      const passwordsMatch = await userRecord.passwordMatches(req.password);
+      const passwordsMatch = await user.passwordMatches(req.password);
 
       if (!passwordsMatch) {
         res.setHeader("WWW-Authenticate", 'Basic realm="user"');
@@ -123,8 +122,6 @@ async function create(req, res) {
     res.status(406).send();
   } else if (typeof user?.name !== "string") {
     res.status(406).send();
-  } else if (typeof user?.isInstructor !== "boolean") {
-    res.status(406).send();
   } else {
     const registrant = new userModel({
       name: user.name,
@@ -151,6 +148,7 @@ async function create(req, res) {
       if (error?.code === duplicateKeyError) {
         res.status(403).send();
       } else if (error?.name === "ValidationError" || error?.name === "CastError") {
+        console.log(error);
         res.status(406).send();
       } else {
         res.status(504).send();
@@ -174,7 +172,7 @@ async function update(req, res) {
   } else {
     try {
       const user = await userModel
-        .findOneAndUpdate({ email: req.userUid }, req.body)
+        .findByIdAndUpdate(req.userUid, req.body, { new: true })
         .lean();
       if (!user) {
         res.status(406).send();
@@ -269,7 +267,7 @@ async function uploadFiles(req, res) {
         return;
       }
 
-      if ((req?.files?.length === undefined) || (req.files.length === 0)) {
+      if (req?.files?.length === undefined || req.files.length === 0) {
         return res.status(406).send();
       }
 
@@ -321,6 +319,80 @@ async function accessGoogleDriveFiles(req, res) {
   }
 }
 
+/**
+ * Create a new course
+ *
+ * @see "POST /courses" in "/openapi.yaml" for details.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function createCourse(req, res) {
+  if (!("userUid" in req)) {
+    res.setHeader("WWW-Authenticate", 'Bearer realm="user"');
+    res.status(401).send();
+
+    return;
+  }
+
+  try {
+    /*
+    First, the user is checked to ensure that they're an instructor.  Only instructors can create
+    courses.
+    */
+
+    const user = await userModel.findById(req.userUid).lean();
+
+    if (!user) {
+      res.status(401).send();
+
+      return;
+    }
+
+    if (!user.instructorData) {
+      res.status(403).send();
+
+      return;
+    }
+
+    /*
+    Next, the course data is validated.  If any required fields are missing or have invalid values
+    then an appropriate error code is returned.
+    */
+
+    const course = req.body;
+
+    if (
+      typeof course?.UID !== "string" ||
+      course.UID !== "" ||
+      typeof course?.instructor !== "string" ||
+      course.instructor !== req.userUid ||
+      typeof course?.title !== "string" ||
+      typeof course?.description !== "string" ||
+      typeof course?.price !== "number" ||
+      course.price < 0 ||
+      typeof course?.duration !== "number" ||
+      course.duration < 0
+    ) {
+      res.status(406).send();
+
+      return;
+    }
+
+    /*
+    TODO:  Call service function to create the course
+
+    const courseUid = await service.createCourse(course);
+    res.status(201).send(courseUid);
+    */
+
+    res.status(501).send(); // Not implemented yet
+  } catch (error) {
+    console.error("Error creating course:", error);
+    res.status(504).send();
+  }
+}
+
 export {
   getAll,
   get,
@@ -332,5 +404,6 @@ export {
   uploadFiles,
   // updateFile,
   deleteFile,
-  accessGoogleDriveFiles
+  accessGoogleDriveFiles,
+  createCourse
 };

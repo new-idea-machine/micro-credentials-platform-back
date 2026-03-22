@@ -3,7 +3,7 @@ info:
   title: Untapped Energy Application
   description: >-
     An application for better support of the ongoing learning initiatives of Untapped Energy.
-  version: "0.8.0"
+  version: "0.10.0"
 
 servers:
   - url: http://localhost/api:5001
@@ -24,6 +24,8 @@ paths:
     get:
       summary: Log a user in
       description: Log a user in.
+      tags:
+        - Authentication
       security:
         - AuthHTTPBasic: []
       responses:
@@ -45,6 +47,8 @@ paths:
     post:
       summary: Add a new user.
       description: Add a new user to the system.
+      tags:
+        - Authentication
       security:
         - AuthHTTPBasic: []
       requestBody:
@@ -78,6 +82,8 @@ paths:
         associated with that e-mail address.  The e-mail address is encoded with Base64 and passed
         as an HTTP Bearer authentication token.  For security reasons, no error responses are given
         (except for database connectivity issues).
+      tags:
+        - Authentication
       security:
         - AuthHTTPBearer: []
       responses:
@@ -98,6 +104,8 @@ paths:
         token that was sent to the user via this path's GET method, and the "password" part is the
         new password.  If successful then the user's password is changed and the user is logged in
         (the token in the response body is the bearer token that represents the user).
+      tags:
+        - Authentication
       security:
         - AuthHTTPBasic: []
       responses:
@@ -118,6 +126,8 @@ paths:
     get:
       summary: Return a specific user.
       description: Returns information about the user identified by the bearer token.
+      tags:
+        - User
       security:
         - AuthHTTPBearer: []
       responses:
@@ -135,6 +145,8 @@ paths:
     patch:
       summary: Update a specific user.
       description: Update information about the user identified by the bearer token.
+      tags:
+        - User
       requestBody:
         description: Updated details of the user.
         required: true
@@ -163,6 +175,8 @@ paths:
       description: >-
         Removes the user identified by the bearer token from the system (as well as any related
         data).
+      tags:
+        - User
       security:
         - AuthHTTPBearer: []
       responses:
@@ -179,6 +193,8 @@ paths:
       description: >-
         Returns all courses available for registration.  The courses do not contain any components
         (i.e. modules or assessments) and are therefore suitable for public promotion.
+      tags:
+        - Courses
       responses:
         "200":
           description: List of available courses
@@ -198,10 +214,12 @@ paths:
         empty string, and the "instructor" field must be the same as the authenticated user.  If
         successful, the user's database document is automatically updated to include the new
         course.
+      tags:
+        - Courses
       security:
         - AuthHTTPBearer: []
       requestBody:
-        description: Details of the course to be created
+        description: Course details.
         required: true
         content:
           application/json:
@@ -211,10 +229,9 @@ paths:
         "201":
           description: Course successfully created
           content:
-            text/plain:
+            application/json:
               schema:
-                type:  string
-                description:  Course UID
+                $ref: "#/components/schemas/Course"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -225,20 +242,43 @@ paths:
           $ref: "#/components/responses/CantConnectToDatabase"
 
   /courses/{courseId}:
+    parameters:
+      - name: courseId
+        in: path
+        required: true
+        description: Unique identifier of the course
+        schema:
+          type: string
+    get:
+      summary: Retrieve a specific course.
+      description: Fetch the course resource by specifying its ID.
+      tags:
+        - Courses
+      security:
+        - AuthHTTPBearer: []
+      responses:
+        "200":
+          description: Course successfully retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
+        "402":
+          description: Course not paid for.
+        "404":
+          description: Course not found.
+        "504":
+          $ref: "#/components/responses/CantConnectToDatabase"
+
     patch:
       summary: Update a specific course
       description: >-
         Update details of a specific course.  Only the instructor who created the course can update
         it.
+      tags:
+        - Courses
       security:
         - AuthHTTPBearer: []
-      parameters:
-        - name: courseId
-          in: path
-          required: true
-          description: Unique identifier of the course
-          schema:
-            type: string
       requestBody:
         description: Updated course details
         required: true
@@ -249,6 +289,10 @@ paths:
       responses:
         "200":
           description: Course successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Course"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -265,15 +309,10 @@ paths:
       description: >-
         Delete a specific course.  Only the instructor who created the course can delete it.
         This will not remove the course from any enrolled learners.
+      tags:
+        - Courses
       security:
         - AuthHTTPBearer: []
-      parameters:
-        - name: courseId
-          in: path
-          required: true
-          description: Unique identifier of the course
-          schema:
-            type: string
       responses:
         "200":
           description: Course successfully deleted
@@ -291,6 +330,8 @@ paths:
       summary: Upload multiple files
       description: >-
         Upload one or more files.  Only instructors can upload files.
+      tags:
+        - Files
       security:
         - AuthHTTPBearer: []
       requestBody:
@@ -332,6 +373,8 @@ paths:
       description: >-
         Replace one or more existing files.  Each file must include its URL to identify which file
         to replace.  Only instructors can update files, and they can only update their own files.
+      tags:
+        - Files
       security:
         - AuthHTTPBearer: []
       requestBody:
@@ -436,10 +479,12 @@ components:
           type: string
           nullable: true
         learnerData:
-          $ref: "#/components/schemas/LearnerData"
+          allOf:
+          - $ref: "#/components/schemas/LearnerData"
           nullable: true
         instructorData:
-          $ref: "#/components/schemas/InstructorData"
+          allOf:
+          - $ref: "#/components/schemas/InstructorData"
           nullable: true
       required:
         - name
@@ -579,7 +624,7 @@ components:
           maxItems: 26
         answer:
           type: integer
-        correctChoice:
+        correctOption:
           type: integer
         explanation:
           type: string

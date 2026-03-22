@@ -17,8 +17,10 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 
+const MONGODB_CONNECTED = 1;
+
 /**
- * The the cost of processing the data for generating a hash.
+ * The cost of processing the data for generating a hash.
  *
  * See {@link https://www.npmjs.com/package/bcrypt#a-note-on-rounds bcrypt -- A Note on Rounds} for
  * more information on what this value means and how it affects performance.
@@ -32,9 +34,11 @@ const BCRYPT_NUM_SALT_ROUNDS = 10;
 dotenv.config();
 
 const connectionString = process.env.MONGO_URL;
-const database = await mongoose.connect(connectionString);
 
+await mongoose.connect(connectionString);
 console.log(`Connected to ${connectionString}`);
+
+const database = mongoose.connection;
 
 /**
  * Learner data schema.
@@ -43,8 +47,9 @@ console.log(`Connected to ${connectionString}`);
  * @property {Array<ObjectId>} courses - References to Course documents that the learner is
  * enrolled in.
  */
-const learnerSchema = new mongoose.Schema({
-  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
+const learnerDataSchema = new mongoose.Schema({
+  _id: false,
+  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "Course", required: true }
 });
 
 /**
@@ -53,8 +58,9 @@ const learnerSchema = new mongoose.Schema({
  * @kind class
  * @property {Array<ObjectId>} courses - References to the instructor's Course documents.
  */
-const instructorSchema = new mongoose.Schema({
-  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "courses", required: true }
+const instructorDataSchema = new mongoose.Schema({
+  _id: false,
+  courses: { type: [mongoose.Schema.Types.ObjectId], ref: "Course", required: true }
 });
 
 /**
@@ -72,8 +78,8 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  learnerData: { type: learnerSchema, required: true },
-  instructorData: { type: instructorSchema }
+  learnerData: { type: learnerDataSchema, required: true },
+  instructorData: { type: instructorDataSchema }
 });
 
 /**
@@ -110,76 +116,14 @@ userSchema.pre(
   /*
   If a document's ".password" member has been modified then encrypt it before storing it in the
   database.
-
-  @param {!function} next - The function that invokes subsequent middleware.
   */
-  async function (next) {
-    console.assert(typeof next === "function");
-
+  async function () {
     if (this.isModified("password")) {
-      try {
-        const salt = await bcrypt.genSalt(BCRYPT_NUM_SALT_ROUNDS);
-        this.password = await bcrypt.hash(this.password, salt);
-
-        next();
-      } catch (error) {
-        next(error);
-      }
-    } else {
-      next();
+      const salt = await bcrypt.genSalt(BCRYPT_NUM_SALT_ROUNDS);
+      this.password = await bcrypt.hash(this.password, salt);
     }
   }
 );
-
-/**
- * Question schema for the database.
- *
- * @kind class
- * @property {string} question - The text of the question.
- * @property {Array<string>} options - Array of possible answers (2-26 options).
- * @property {number} [answer] - Index of learner's answer (required for learners, not for
- * instructors).
- * @property {number} correctOption - Index of the correct option.
- * @property {string} explanation - Explanation of the correct answer.
- * @property {Date} creationTime - When this question was created.
- * @property {Date} updateTime - When this question was last updated.
- */
-const questionSchema = new mongoose.Schema({
-  question: { type: String, required: true },
-  options: {
-    type: [String],
-    required: true,
-    validate: {
-      validator: (options) => {
-        return options.length >= 2 && options.length <= 26;
-      },
-      message: "There must be between 2 and 26 options"
-    }
-  },
-  answer: {
-    type: Number,
-    validate: {
-      validator: (answer) => {
-        return answer >= 0 && answer < this.options.length;
-      },
-      message: "The index of the answer must be at least 0 and less than the number of options"
-    }
-  },
-  correctOption: {
-    type: Number,
-    required: true,
-    validate: {
-      validator: (correctOption) => {
-        return correctOption >= 0 && correctOption < this.options.length;
-      },
-      message:
-        "The index of the correct option must be at least 0 and less than the number of options"
-    }
-  },
-  explanation: { type: String, required: true },
-  creationTime: { type: Date, required: true, default: Date.now },
-  updateTime: { type: Date, required: true, default: Date.now }
-});
 
 /**
  * Module schema.
@@ -197,28 +141,90 @@ const questionSchema = new mongoose.Schema({
  * @property {Date} creationTime - When this module was created.
  * @property {Date} updateTime - When this module was last updated.
  */
-const moduleSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  type: {
-    type: String,
-    required: true,
-    enum: ["Audio", "Video", "Markdown"]
+const moduleSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    type: {
+      type: String,
+      required: true,
+      enum: ["Audio", "Video", "Markdown"]
+    },
+    chapters: {
+      type: [
+        {
+          _id: false,
+          title: { type: String, required: true },
+          timeIndex: { type: Number, required: true } // in seconds
+        }
+      ],
+      default: undefined
+    },
+    url: { type: String, required: true },
+    urlAuthentication: {
+      type: {
+        scheme: String,
+        parameters: String
+      },
+      required: false
+    },
+    completed: Boolean
   },
-  chapters: [
-    {
-      title: { type: String, required: true },
-      timeIndex: { type: Number, required: true } // in seconds
-    }
-  ],
-  url: { type: String, required: true },
-  urlAuthentication: {
-    scheme: String,
-    parameters: String
+  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
+);
+
+moduleSchema.pre("validate", function () {
+  //Checks for chapters: This field will only be present if the "type" field is Audio or Video
+  if ((this.type === "Audio" || this.type === "Video") && !Array.isArray(this.chapters)) {
+    throw new Error("Chapters field is required when type is Audio or Video");
+  }
+  if (this.type === "Markdown" && this.chapters !== undefined) {
+    throw new Error("Chapters field cannot be present when type is Markdown");
+  }
+});
+
+/**
+ * Question schema for the database.
+ *
+ * @kind class
+ * @property {string} question - The text of the question.
+ * @property {Array<string>} options - Array of possible answers (2-26 options).
+ * @property {number} [answer] - Index of learner's answer (required for learners, not for
+ * instructors).
+ * @property {number} correctOption - Index of the correct option.
+ * @property {string} explanation - Explanation of the correct answer.
+ * @property {Date} creationTime - When this question was created.
+ * @property {Date} updateTime - When this question was last updated.
+ */
+const questionSchema = new mongoose.Schema(
+  {
+    _id: false,
+    question: { type: String, required: true },
+    options: { type: [String], required: true },
+    answer: Number,
+    correctOption: { type: Number, required: true },
+    explanation: { type: String, required: true }
   },
-  completed: Boolean,
-  creationTime: { type: Date, required: true, default: Date.now },
-  updateTime: { type: Date, required: true, default: Date.now }
+  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
+);
+
+questionSchema.pre("validate", function () {
+  if (this.options.length < 2 || this.options.length > 26) {
+    throw new Error("There must be at least 2 options and no more than 26 options");
+  }
+  if (this.correctOption < 0 || this.correctOption >= this.options.length) {
+    throw new Error(
+      "The index of the correct option must be at least 0 and less than the number of options"
+    );
+  }
+  if (
+    typeof this.answer === "number" &&
+    (this.answer < 0 || this.answer >= this.options.length)
+  ) {
+    throw new Error(
+      "The index of the answer must be at least 0 and less than the number of options"
+    );
+  }
 });
 
 /**
@@ -232,21 +238,83 @@ const moduleSchema = new mongoose.Schema({
  * @property {Date} creationTime - When this assessment was created.
  * @property {Date} updateTime - When this assessment was last updated.
  */
-const assessmentSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  questions: { type: [questionSchema], required: true },
-  currentQuestion: {
-    type: Number,
+const assessmentSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    questions: { type: [questionSchema], required: true },
+    currentQuestion: Number
+  },
+  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
+);
+
+assessmentSchema.pre("validate", function () {
+  if (this.questions.length === 0) {
+    throw new Error("At least one question is required");
+  }
+  if (
+    typeof this.currentQuestion === "number" &&
+    (this.currentQuestion < 0 || this.currentQuestion >= this.questions.length)
+  ) {
+    throw new Error(
+      "The index of the current question must be at least 0 and less than the number of questions"
+    );
+  }
+});
+
+/**
+ * Component reference schema for courses.
+ * References either a Module or Assessment by ID and type.
+ *
+ * @kind class
+ * @property {string} componentType - Type of component ("Module" or "Assessment").
+ * @property {ObjectId} componentId - Reference to the Module or Assessment document.
+ * @property {boolean} [completed] - Whether or not a learner has completed this component.
+ */
+const componentRefSchema = new mongoose.Schema({
+  _id: false,
+  componentType: {
+    type: String,
+    required: true,
+    enum: ["Module", "Assessment"]
+  },
+  componentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    refPath: "components.componentType",
     validate: {
-      validator: (currentQuestion) => {
-        return currentQuestion >= 0 && currentQuestion <= this.questions.length;
+      validator: async function (value) {
+        // Skip validation if database connection is closed
+
+        if (database.readyState !== MONGODB_CONNECTED) {
+          return true;
+        }
+
+        // Determine which model to check based on componentType
+
+        const componentType = this.componentType;
+
+        try {
+          if (componentType === "Module") {
+            return (await mongoose.model("Module").exists({ _id: value })) !== null;
+          } else if (componentType === "Assessment") {
+            return (await mongoose.model("Assessment").exists({ _id: value })) !== null;
+          }
+        } catch (error) {
+          // If there's an error (e.g., connection closed), skip validation
+
+          if (error.name === "MongoNotConnectedError") {
+            return true;
+          }
+          throw error;
+        }
+
+        return false;
       },
-      message:
-        "The index of the current question must be at least 0 and less than the number of questions"
+      message: (props) => `Referenced component with ID ${props.value} does not exist`
     }
   },
-  creationTime: { type: Date, required: true, default: Date.now },
-  updateTime: { type: Date, required: true, default: Date.now }
+  // Learner-specific fields
+  completed: { type: Boolean, default: false }
 });
 
 /**
@@ -264,37 +332,114 @@ const assessmentSchema = new mongoose.Schema({
  * @property {Date} creationTime - When this course was created.
  * @property {Date} updateTime - When this course was last updated.
  */
-const courseSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  instructor: { type: mongoose.Schema.Types.ObjectId, ref: "users", required: true },
-  components: {
-    type: [mongoose.Schema.Types.Mixed],
-    required: true,
-    validate: {
-      validator: function (component) {
-        return component.every(
-          (item) =>
-            (item.type && ["Audio", "Video", "Markdown"].includes(item.type)) || // Module
-            (item.questions && Array.isArray(item.questions)) // Assessment
-        );
-      },
-      message: "All components must be either Module or Assessment objects"
-    }
+const courseSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    instructor: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    components: [componentRefSchema],
+    currentComponent: Number,
+    credentialEarned: Boolean
   },
-  currentComponent: {
-    type: Number,
-    validate: {
-      validator: (currentComponent) => {
-        return currentComponent >= 0 && currentComponent <= this.components.length;
-      },
-      message:
-        "The index of the current component must be at least 0 and less than the number of components"
+  { timestamps: { createdAt: "creationTime", updatedAt: "updateTime" } }
+);
+
+courseSchema.pre("validate", async function () {
+  // Validate currentComponent index
+  if (
+    typeof this.currentComponent === "number" &&
+    (this.currentComponent < 0 || this.currentComponent > this.components.length)
+  ) {
+    throw new Error(
+      "The index of the current component must be at least 0 and no greater than the number of components"
+    );
+  }
+
+  // Validate components array
+  if (!Array.isArray(this.components) || this.components.length === 0) {
+    throw new Error("At least one component is required");
+  }
+
+  /**
+   * Check to see if a document exists in a specific collection (using ID and model name) in the
+   * database.
+   *
+   * This function verifies the database connection state before attempting to query for the
+   * document's existence. If the database connection is closed or closing, this function
+   * cannot make any determination and returns `undefined`.
+   *
+   * @async
+   * @function documentExists
+   * @inner
+   * @param {string} modelName - The name of the Mongoose model to search (e.g., "User", "Module",
+   * "Assessment")
+   * @param {mongoose.Types.ObjectId|string} documentId - The unique identifier of the document to
+   * check
+   * @returns {Promise<boolean|undefined>} Returns:
+   *   - `true` if the document exists in the database
+   *   - `false` if the document does not exist in the database
+   *   - `undefined` if the database connection is not active or a connection error occurred
+   * @throws {Error} Re-throws any errors that are not `MongoNotConnectedError`
+   *
+   * @example
+   * // Check if a user exists and handle all cases
+   *
+   * const exists = await documentExists("User", userId);
+   *
+   * if (exists === false) {
+   *   throw new Error(`User ${userId} not found`);
+   * } else if (exists === undefined) {
+   *   // Database not connected - skip validation or handle appropriately
+   *
+   *   console.warn("Cannot validate user existence -- database not connected");
+   * }
+   *
+   * // If exists === true, validation passes
+   *
+   * @example
+   * // Check if a module exists
+   *
+   * const moduleExists = await documentExists("Module", moduleId);
+   *
+   * if (moduleExists === false) {
+   *   throw new Error(`Module ${moduleId} not found`);
+   * }
+   */
+  async function documentExists(modelName, documentId) {
+    let documentExists = undefined;
+
+    if (database.readyState === MONGODB_CONNECTED) {
+      try {
+        const model = mongoose.model(modelName);
+
+        documentExists = (await model.exists({ _id: documentId })) !== null;
+      } catch (error) {
+        // Skip validation if connection is closed
+
+        if (error.name !== "MongoNotConnectedError") {
+          throw error;
+        }
+      }
     }
-  },
-  credentialEarned: Boolean,
-  creationTime: { type: Date, required: true, default: Date.now },
-  updateTime: { type: Date, required: true, default: Date.now }
+
+    return documentExists;
+  }
+
+  // Validate instructor reference
+  if ((await documentExists("User", this.instructor)) === false) {
+    throw new Error(`Instructor with ID ${this.instructor} does not exist`);
+  }
+
+  // Validate component references
+  for (const component of this.components) {
+    const { componentType, componentId } = component;
+
+    if ((await documentExists(componentType, componentId)) === false) {
+      throw new Error(
+        `Referenced "${componentType}" component with ID ${componentId} does not exist`
+      );
+    }
+  }
 });
 
 /**
@@ -319,20 +464,24 @@ const fileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const userModel = database.model("users", userSchema);
-const courseModel = database.model("courses", courseSchema);
-const fileModel = database.model("files", fileSchema);
+const userModel = mongoose.model("User", userSchema);
+const moduleModel = mongoose.model("Module", moduleSchema);
+const assessmentModel = mongoose.model("Assessment", assessmentSchema);
+const courseModel = mongoose.model("Course", courseSchema);
+const fileModel = mongoose.model("File", fileSchema);
 
 export {
   database,
   userSchema,
-  learnerSchema,
-  instructorSchema,
+  learnerDataSchema,
+  instructorDataSchema,
   moduleSchema,
   questionSchema,
   assessmentSchema,
   courseSchema,
   userModel,
+  moduleModel,
+  assessmentModel,
   courseModel,
   fileModel
 };
