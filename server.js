@@ -3,7 +3,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import nodemailer from "nodemailer";
-import { routes } from "./src/index.js";
+import router from "./src/router.js";
 import { authenticationMiddleware } from "./tokenManager.js";
 
 dotenv.config();
@@ -19,7 +19,7 @@ app.listen(process.env.PORT, () => {
   console.log(`App is Listening on PORT ${process.env.PORT}`);
 });
 
-app.use("/", routes);
+app.use("/", router);
 
 //Change the default response for unhandled requests to status code 400
 app.use((req, res) => {

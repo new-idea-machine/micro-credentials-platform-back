@@ -1,7 +1,7 @@
 /**
  * Controller module for handling HTTP requests and responses.
  *
- * Refer to the OpenAPI specification (`/openapi.yaml`) and cross-reference `/src/routes.js` for
+ * Refer to the OpenAPI specification (`/openapi.yaml`) and cross-reference `/src/router.js` for
  * details regarding each handler's expected request and response.
  *
  * @module controller
