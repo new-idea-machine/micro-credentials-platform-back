@@ -1,0 +1,395 @@
+openapi: 3.0.3
+info:
+  title: Test Schemas
+  description: >-
+    A set of test schemas for validating API requests and responses.
+  version: 1.0.0
+
+paths:
+  /:
+    get:
+      summary: Placeholder
+      description: This path exists solely to comply with the OpenAPI specification.
+      responses:
+        "200":
+          description: Server is ok.
+
+components:
+  schemas:
+    # Schema for testing: required fields, type validation, minLength constraint, minimum
+    # constraint, nullable arrays
+    Product:
+      type: object
+      properties:
+        productId:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+        price:
+          type: number
+          minimum: 0
+        inStock:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+      required:
+        - name
+        - price
+        - inStock
+
+    # Schema for testing: "additionalProperties: false" constraint
+    StrictProduct:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    # Schema for testing: format validation (email)
+    Customer:
+      type: object
+      properties:
+        customerId:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - customerId
+        - fullName
+        - email
+
+    # Schema for testing: minimum constraint on integer, nested object validation
+    OrderItem:
+      type: object
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          minimum: 0
+      required:
+        - productId
+        - quantity
+        - unitPrice
+
+    # Schema for testing: $ref to nested schemas, array of references, readOnly fields, minItems
+    # constraint
+    Order:
+      type: object
+      properties:
+        orderId:
+          type: string
+          readOnly: true
+        customer:
+          $ref: "#/components/schemas/Customer"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+          minItems: 1
+        totalAmount:
+          type: number
+          minimum: 0
+          readOnly: true
+        orderDate:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - orderId
+        - customer
+        - items
+        - totalAmount
+
+    # Schema for testing: base schema for allOf composition, integer minimum/maximum constraints
+    VehicleBase:
+      type: object
+      properties:
+        manufacturer:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+      required:
+        - manufacturer
+        - model
+        - year
+
+    # Schema for testing: allOf composition, $ref in allOf, enum constraint, readOnly fields,
+    # "format: date-time"
+    Car:
+      allOf:
+        - $ref: "#/components/schemas/VehicleBase"
+        - type: object
+          properties:
+            vehicleId:
+              type: string
+              readOnly: true
+            doors:
+              type: integer
+              minimum: 2
+              maximum: 5
+            fuelType:
+              type: string
+              enum:
+                - "Gasoline"
+                - "Diesel"
+                - "Electric"
+                - "Hybrid"
+            registrationDate:
+              type: string
+              format: date-time
+              readOnly: true
+          required:
+            - vehicleId
+            - doors
+            - fuelType
+
+    # Schema for testing: allOf composition without readOnly fields, inherited constraints
+    CarNew:
+      allOf:
+        - $ref: "#/components/schemas/VehicleBase"
+        - type: object
+          properties:
+            doors:
+              type: integer
+              minimum: 2
+              maximum: 5
+            fuelType:
+              type: string
+              enum:
+                - "Gasoline"
+                - "Diesel"
+                - "Electric"
+                - "Hybrid"
+          required:
+            - doors
+            - fuelType
+
+    # Schema for testing: oneOf composition with multiple $ref, readOnly fields, "format:
+    # date-time"
+    Payment:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          readOnly: true
+        amount:
+          type: number
+          minimum: 0.01
+        method:
+          oneOf:
+            - $ref: "#/components/schemas/CreditCardPayment"
+            - $ref: "#/components/schemas/BankTransferPayment"
+        timestamp:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - paymentId
+        - amount
+        - method
+
+    # Schema for testing: pattern validation (regex), minimum constraint on integer
+    CreditCardPayment:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+          pattern: "^\\d{16}"
+        expiryMonth:
+          type: integer
+          minimum: 1
+          maximum: 12
+        expiryYear:
+          type: integer
+          minimum: 2024
+        cvv:
+          type: string
+          pattern: "^\\d{3,4}"
+      required:
+        - cardNumber
+        - expiryMonth
+        - expiryYear
+        - cvv
+
+    # Schema for testing: simple object in oneOf branch
+    BankTransferPayment:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        routingNumber:
+          type: string
+        bankName:
+          type: string
+      required:
+        - accountNumber
+        - routingNumber
+        - bankName
+
+    # Schema for testing: anyOf composition with multiple types
+    LabelOrValue:
+      type: object
+      properties:
+        value:
+          anyOf:
+            - type: string
+            - type: number
+      required:
+        - value
+
+    # Schema for testing: deeply nested structures, multiple levels of arrays, readOnly fields,
+    # pattern validation, "format: date", minItems
+    Organization:
+      type: object
+      properties:
+        orgId:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+        departments:
+          type: array
+          items:
+            type: object
+            properties:
+              deptId:
+                type: string
+                readOnly: true
+              deptName:
+                type: string
+              employees:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    empId:
+                      type: string
+                      readOnly: true
+                    firstName:
+                      type: string
+                    lastName:
+                      type: string
+                    position:
+                      type: string
+                    salary:
+                      type: number
+                      minimum: 0
+                      nullable: true
+                    hireDate:
+                      type: string
+                      format: date
+                      readOnly: true
+                  required:
+                    - empId
+                    - firstName
+                    - lastName
+                    - position
+              budget:
+                type: number
+                minimum: 0
+            required:
+              - deptId
+              - deptName
+              - employees
+              - budget
+          minItems: 1
+        headquarters:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            province:
+              type: string
+            postalCode:
+              type: string
+              pattern: "^[A-Za-z]\\d[A-Za-z][ -]?\\d[A-Za-z]\\d$"
+            country:
+              type: string
+          required:
+            - street
+            - city
+            - country
+        foundedDate:
+          type: string
+          format: date
+          readOnly: true
+      required:
+        - orgId
+        - name
+        - departments
+        - headquarters
+
+    # Schema for testing: nullable fields, minLength/maxLength constraints, maxItems constraint,
+    # "format: date-time", readOnly fields, optional fields
+    BlogPost:
+      type: object
+      properties:
+        postId:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+          minLength: 10
+        author:
+          type: object
+          properties:
+            authorId:
+              type: string
+            username:
+              type: string
+            bio:
+              type: string
+              nullable: true
+          required:
+            - authorId
+            - username
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+          maxItems: 3
+        publishedDate:
+          type: string
+          format: date-time
+          nullable: true
+        lastModified:
+          type: string
+          format: date-time
+          readOnly: true
+        viewCount:
+          type: integer
+          minimum: 0
+          readOnly: true
+      required:
+        - postId
+        - title
+        - content
+        - author
+        - lastModified
+        - viewCount
