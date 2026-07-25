@@ -142,11 +142,9 @@ describe("Tests for the SchemaValidator class", () => {
     }
   };
 
+  const constraints = {};
+
   let validator;
-  let orderMinItems;
-  let vehicleYearMinimum;
-  let orderItemQuantityMinimum;
-  let paymentExpiryMonthMaximum;
 
   beforeAll(() => {
     validator = new SchemaValidator(testSchemaFilename);
@@ -165,10 +163,10 @@ describe("Tests for the SchemaValidator class", () => {
     const orderItemSchema = validator.getSchema("OrderItem");
     const orderItemUnitPriceMinimum = orderItemSchema?.properties?.unitPrice?.minimum;
 
-    orderItemQuantityMinimum = orderItemSchema?.properties?.quantity?.minimum;
+    constraints.orderItemQuantityMinimum = orderItemSchema?.properties?.quantity?.minimum;
 
-    if ((typeof orderItemQuantityMinimum !== "number") || (orderItemQuantityMinimum < 1)) {
-      throw new Error(`OrderItem schema (${orderItemQuantityMinimum}) must have a quantity minimum property of at least 1`);
+    if ((typeof constraints.orderItemQuantityMinimum !== "number") || (constraints.orderItemQuantityMinimum < 1)) {
+      throw new Error(`OrderItem schema (${constraints.orderItemQuantityMinimum}) must have a quantity minimum property of at least 1`);
     }
 
     if ((typeof orderItemUnitPriceMinimum !== "number") || (orderItemUnitPriceMinimum < 0)) {
@@ -177,20 +175,20 @@ describe("Tests for the SchemaValidator class", () => {
 
     const orderSchema = validator.getSchema("Order");
 
-    orderMinItems = orderSchema?.properties?.items?.minItems;
+    constraints.orderMinItems = orderSchema?.properties?.items?.minItems;
 
-    if ((typeof orderMinItems !== "number") || (orderMinItems < 1)) {
-      throw new Error(`Order schema (${orderMinItems}) must have an items minItems property of at least 1`);
+    if ((typeof constraints.orderMinItems !== "number") || (constraints.orderMinItems < 1)) {
+      throw new Error(`Order schema (${constraints.orderMinItems}) must have an items minItems property of at least 1`);
     }
 
     testData.orderQuantityOne = structuredClone(testData.order);
-    testData.orderQuantityOne.items[0].quantity = orderItemQuantityMinimum;
+    testData.orderQuantityOne.items[0].quantity = constraints.orderItemQuantityMinimum;
     testData.orderQuantityOne.totalAmount = 29.99;
 
     testData.orderBoundaryMin = structuredClone(testData.order);
-    testData.orderBoundaryMin.items[0].quantity = orderItemQuantityMinimum;
+    testData.orderBoundaryMin.items[0].quantity = constraints.orderItemQuantityMinimum;
     testData.orderBoundaryMin.items[0].unitPrice = orderItemUnitPriceMinimum;
-    testData.orderBoundaryMin.totalAmount = orderItemQuantityMinimum * orderItemUnitPriceMinimum;
+    testData.orderBoundaryMin.totalAmount = constraints.orderItemQuantityMinimum * orderItemUnitPriceMinimum;
 
     /*
     Test data variants for the Car and CarNew schemas.
@@ -198,10 +196,10 @@ describe("Tests for the SchemaValidator class", () => {
 
     const vehicleBaseSchema = validator.getSchema("VehicleBase");
 
-    vehicleYearMinimum = vehicleBaseSchema?.properties?.year?.minimum;
+    constraints.vehicleYearMinimum = vehicleBaseSchema?.properties?.year?.minimum;
 
-    if (typeof vehicleYearMinimum !== "number") {
-      throw new Error(`VehicleBase schema (${vehicleYearMinimum}) must have a year minimum property`);
+    if (typeof constraints.vehicleYearMinimum !== "number") {
+      throw new Error(`VehicleBase schema (${constraints.vehicleYearMinimum}) must have a year minimum property`);
     }
 
     testData.carGasoline = structuredClone(testData.car);
@@ -213,10 +211,10 @@ describe("Tests for the SchemaValidator class", () => {
 
     const creditCardPaymentSchema = validator.getSchema("CreditCardPayment");
 
-    paymentExpiryMonthMaximum = creditCardPaymentSchema?.properties?.expiryMonth?.maximum;
+    constraints.paymentExpiryMonthMaximum = creditCardPaymentSchema?.properties?.expiryMonth?.maximum;
 
-    if (typeof paymentExpiryMonthMaximum !== "number") {
-      throw new Error(`CreditCardPayment schema (${paymentExpiryMonthMaximum}) must have an expiryMonth maximum property`);
+    if (typeof constraints.paymentExpiryMonthMaximum !== "number") {
+      throw new Error(`CreditCardPayment schema (${constraints.paymentExpiryMonthMaximum}) must have an expiryMonth maximum property`);
     }
 
     testData.paymentBoundaryMax = structuredClone(testData.creditCardPayment);
@@ -447,7 +445,7 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject array below minItems", () => {
       const invalidOrder = structuredClone(testData.orderQuantityOne);
 
-      invalidOrder.items = Array.from({ length: orderMinItems - 1 });
+      invalidOrder.items = Array.from({ length: constraints.orderMinItems - 1 });
       invalidOrder.totalAmount = 0;
 
       expect(validator.isValid(invalidOrder, "Order")).toBe(false);
@@ -500,7 +498,7 @@ describe("Tests for the SchemaValidator class", () => {
       console.assert(invalidOrder.items.length > 0,
         "Test data must have at least one item to test quantity below minimum");
 
-      invalidOrder.items[0].quantity = orderItemQuantityMinimum - 1;
+      invalidOrder.items[0].quantity = constraints.orderItemQuantityMinimum - 1;
       invalidOrder.items[0].unitPrice = 29.99;
       invalidOrder.totalAmount = 0;
 
@@ -510,7 +508,7 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject just above maximum", () => {
       const invalidPayment = structuredClone(testData.paymentBoundaryMax);
 
-      invalidPayment.method.expiryMonth = paymentExpiryMonthMaximum + 1;
+      invalidPayment.method.expiryMonth = constraints.paymentExpiryMonthMaximum + 1;
 
       expect(validator.isValid(invalidPayment, "Payment")).toBe(false);
     });
@@ -553,7 +551,7 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject Order with invalid array item", () => {
       const invalidOrder = structuredClone(testData.order);
 
-      invalidOrder.items[0].quantity = orderItemQuantityMinimum - 1;
+      invalidOrder.items[0].quantity = constraints.orderItemQuantityMinimum - 1;
 
       expect(validator.isValid(invalidOrder, "Order")).toBe(false);
     });
@@ -585,7 +583,7 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject CarNew with invalid year constraint", () => {
       const invalidCarNew = structuredClone(testData.carNew);
 
-      invalidCarNew.year = vehicleYearMinimum - 1;
+      invalidCarNew.year = constraints.vehicleYearMinimum - 1;
 
       expect(validator.isValid(invalidCarNew, "CarNew")).toBe(false);
     });
