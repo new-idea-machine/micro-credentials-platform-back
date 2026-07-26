@@ -7,9 +7,67 @@
  */
 
 import SchemaValidator from "./schemaValidator.js";
-// import { log } from "console";
 
 const testSchemaFilename = "./test-schemas.yaml";
+
+/*
+List of Test Blocks
+===================
+
+OpenAPI Schema Loading and Metadata
+-----------------------------------
+
+1. Test Data Sanity Checks
+2. Schema Loading
+3. Schema Detection and Lookup
+
+Structure and Requiredness
+--------------------------
+
+1. Required fields
+2. Type checks
+3. Non-object input handling
+4. Type coercion behavior
+
+Primitive and Range Constraints
+-------------------------------
+
+1. Formats (date, date-time, email)
+2. Numeric/string/array boundaries
+3. Regex patterns
+
+Composition and References
+--------------------------
+
+1. Nested object validation
+2. Arrays of referenced schemas
+3. allOf/anyOf semantics
+
+Nullability and Optionality
+---------------------------
+
+1. Nullable fields
+2. Required vs optional members
+
+Object Semantics
+----------------
+
+1. readOnly members
+2. additionalProperties behavior
+
+Validation Reporting
+--------------------
+
+1. Error payload shape
+2. Error payload detail content
+
+Stress and Edge Behavior
+------------------------
+
+1. Large payload performance
+2. Character and unicode handling
+3. Large collections
+*/
 
 describe("Tests for the SchemaValidator class", () => {
   const testData = {
@@ -154,31 +212,45 @@ describe("Tests for the SchemaValidator class", () => {
     }
 
     /*
-    Test data variants for the Order schema.
+    Some test data depends on values in the schemas.  That information is retrieved dynamically and
+    added to the "testData" object here.
+
+    Test data variants for the Order schema:
     */
 
-    console.assert(testData.order.items.length > 0,
-      "Order test data must have at least one item");
+    console.assert(
+      testData.order.items.length > 0,
+      "Order test data must have at least one item"
+    );
 
     const orderItemSchema = validator.getSchema("OrderItem");
     const orderItemUnitPriceMinimum = orderItemSchema?.properties?.unitPrice?.minimum;
 
     constraints.orderItemQuantityMinimum = orderItemSchema?.properties?.quantity?.minimum;
 
-    if ((typeof constraints.orderItemQuantityMinimum !== "number") || (constraints.orderItemQuantityMinimum < 1)) {
-      throw new Error(`OrderItem schema (${constraints.orderItemQuantityMinimum}) must have a quantity minimum property of at least 1`);
+    if (
+      typeof constraints.orderItemQuantityMinimum !== "number" ||
+      constraints.orderItemQuantityMinimum < 1
+    ) {
+      throw new Error(
+        `OrderItem schema (${constraints.orderItemQuantityMinimum}) must have a quantity minimum property of at least 1`
+      );
     }
 
-    if ((typeof orderItemUnitPriceMinimum !== "number") || (orderItemUnitPriceMinimum < 0)) {
-      throw new Error(`OrderItem schema (${orderItemUnitPriceMinimum}) must have a unitPrice minimum property of at least 0`);
+    if (typeof orderItemUnitPriceMinimum !== "number" || orderItemUnitPriceMinimum < 0) {
+      throw new Error(
+        `OrderItem schema (${orderItemUnitPriceMinimum}) must have a unitPrice minimum property of at least 0`
+      );
     }
 
     const orderSchema = validator.getSchema("Order");
 
     constraints.orderMinItems = orderSchema?.properties?.items?.minItems;
 
-    if ((typeof constraints.orderMinItems !== "number") || (constraints.orderMinItems < 1)) {
-      throw new Error(`Order schema (${constraints.orderMinItems}) must have an items minItems property of at least 1`);
+    if (typeof constraints.orderMinItems !== "number" || constraints.orderMinItems < 1) {
+      throw new Error(
+        `Order schema (${constraints.orderMinItems}) must have an items minItems property of at least 1`
+      );
     }
 
     testData.orderQuantityOne = structuredClone(testData.order);
@@ -188,10 +260,11 @@ describe("Tests for the SchemaValidator class", () => {
     testData.orderBoundaryMin = structuredClone(testData.order);
     testData.orderBoundaryMin.items[0].quantity = constraints.orderItemQuantityMinimum;
     testData.orderBoundaryMin.items[0].unitPrice = orderItemUnitPriceMinimum;
-    testData.orderBoundaryMin.totalAmount = constraints.orderItemQuantityMinimum * orderItemUnitPriceMinimum;
+    testData.orderBoundaryMin.totalAmount =
+      constraints.orderItemQuantityMinimum * orderItemUnitPriceMinimum;
 
     /*
-    Test data variants for the Car and CarNew schemas.
+    Test data variants for the Car and CarNew schemas:
     */
 
     const vehicleBaseSchema = validator.getSchema("VehicleBase");
@@ -199,29 +272,34 @@ describe("Tests for the SchemaValidator class", () => {
     constraints.vehicleYearMinimum = vehicleBaseSchema?.properties?.year?.minimum;
 
     if (typeof constraints.vehicleYearMinimum !== "number") {
-      throw new Error(`VehicleBase schema (${constraints.vehicleYearMinimum}) must have a year minimum property`);
+      throw new Error(
+        `VehicleBase schema (${constraints.vehicleYearMinimum}) must have a year minimum property`
+      );
     }
 
     testData.carGasoline = structuredClone(testData.car);
     testData.carGasoline.fuelType = "Gasoline";
 
     /*
-    Test data variants for the CreditCardPayment schema.
+    Test data variants for the CreditCardPayment schema:
     */
 
     const creditCardPaymentSchema = validator.getSchema("CreditCardPayment");
 
-    constraints.paymentExpiryMonthMaximum = creditCardPaymentSchema?.properties?.expiryMonth?.maximum;
+    constraints.paymentExpiryMonthMaximum =
+      creditCardPaymentSchema?.properties?.expiryMonth?.maximum;
 
     if (typeof constraints.paymentExpiryMonthMaximum !== "number") {
-      throw new Error(`CreditCardPayment schema (${constraints.paymentExpiryMonthMaximum}) must have an expiryMonth maximum property`);
+      throw new Error(
+        `CreditCardPayment schema (${constraints.paymentExpiryMonthMaximum}) must have an expiryMonth maximum property`
+      );
     }
 
     testData.paymentBoundaryMax = structuredClone(testData.creditCardPayment);
     testData.paymentBoundaryMax.method.expiryYear = 2099;
 
     /*
-    Test data variant for the BlogPost schema.
+    Test data variant for the BlogPost schema:
     */
 
     const blogPostSchema = validator.getSchema("BlogPost");
@@ -250,8 +328,11 @@ describe("Tests for the SchemaValidator class", () => {
     }
   });
 
-  describe("OpenAPI Schema Loading and Metadata", () => {
+  // ============================================================================================
+  // OPENAPI SCHEMA LOADING AND METADATA
+  // ============================================================================================
 
+  describe("OpenAPI Schema Loading and Metadata", () => {
     /*
     Tests that validate each common test data object and each test data variant against its
     respective schema.  A failure here indicates a problem with either the test data or the
@@ -364,6 +445,17 @@ describe("Tests for the SchemaValidator class", () => {
     });
   });
 
+  // ============================================================================================
+  // STRUCTURE AND REQUIREDNESS
+  // ============================================================================================
+
+  /*
+  Verifies core schema-object matching behavior:
+  - required field enforcement
+  - strict type validation
+  - behavior on null/undefined/non-object inputs
+  */
+
   describe("Structure and Requiredness", () => {
     test("should reject Product with missing required field", () => {
       const invalidProduct = structuredClone(testData.product);
@@ -412,14 +504,29 @@ describe("Tests for the SchemaValidator class", () => {
     });
   });
 
+  // ============================================================================================
+  // PRIMITIVE AND RANGE CONSTRAINTS
+  // ============================================================================================
+
+  /*
+  Verifies scalar and collection constraints implemented by OpenAPI:
+  - format validators
+  - min/max and minLength/maxLength
+  - minItems/maxItems and regex patterns
+  */
+
   describe("Primitive and Range Constraints", () => {
     test("should reject invalid date format", () => {
       const invalidOrg = structuredClone(testData.organization);
 
-      console.assert(invalidOrg.departments.length > 0,
-        "Organization test data must have at least one department");
-      console.assert(invalidOrg.departments[0].employees.length > 0,
-        "Organization test data must have at least one employee in the first department");
+      console.assert(
+        invalidOrg.departments.length > 0,
+        "Organization test data must have at least one department"
+      );
+      console.assert(
+        invalidOrg.departments[0].employees.length > 0,
+        "Organization test data must have at least one employee in the first department"
+      );
 
       invalidOrg.departments[0].employees[0].hireDate = "01/15/2023"; // wrong format
 
@@ -495,8 +602,10 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject just below minimum", () => {
       const invalidOrder = structuredClone(testData.orderBoundaryMin);
 
-      console.assert(invalidOrder.items.length > 0,
-        "Test data must have at least one item to test quantity below minimum");
+      console.assert(
+        invalidOrder.items.length > 0,
+        "Test data must have at least one item to test quantity below minimum"
+      );
 
       invalidOrder.items[0].quantity = constraints.orderItemQuantityMinimum - 1;
       invalidOrder.items[0].unitPrice = 29.99;
@@ -536,8 +645,18 @@ describe("Tests for the SchemaValidator class", () => {
 
       expect(validator.isValid(invalidOrg, "Organization")).toBe(false);
     });
-
   });
+
+  // ============================================================================================
+  // COMPOSITION AND REFERENCES
+  // ============================================================================================
+
+  /*
+  Verifies schema composition and cross-schema references:
+  - nested object constraints through $ref
+  - array item validation for referenced schemas
+  - allOf and anyOf branch behavior
+  */
 
   describe("Composition and References", () => {
     test("should reject Order with invalid nested object", () => {
@@ -575,7 +694,7 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject invalid enum value", () => {
       const invalidCar = structuredClone(testData.carGasoline);
 
-      invalidCar.fuelType = "Plutonium";  // no car manufactured as of this writing uses this fuel!
+      invalidCar.fuelType = "Plutonium"; // no car manufactured as of this writing uses this fuel!
 
       expect(validator.isValid(invalidCar, "Car")).toBe(false);
     });
@@ -598,9 +717,12 @@ describe("Tests for the SchemaValidator class", () => {
       const result = validator.validateWithErrors(invalidCar, "Car");
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.some((error) =>
-        error.keyword === "required" && error.params?.missingProperty === "manufacturer"
-      )).toBe(true);
+      expect(
+        result.errors.some(
+          (error) =>
+            error.keyword === "required" && error.params?.missingProperty === "manufacturer"
+        )
+      ).toBe(true);
     });
 
     test("should validate anyOf with a numeric value", () => {
@@ -622,16 +744,31 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject Organization with invalid nested employee", () => {
       const invalidOrg = structuredClone(testData.organization);
 
-      console.assert(invalidOrg.departments.length > 0,
-        "Test data must have at least one department");
-      console.assert(invalidOrg.departments[0].employees.length > 0,
-        "Test data must have at least one employee in the first department");
+      console.assert(
+        invalidOrg.departments.length > 0,
+        "Test data must have at least one department"
+      );
+      console.assert(
+        invalidOrg.departments[0].employees.length > 0,
+        "Test data must have at least one employee in the first department"
+      );
 
       delete invalidOrg.departments[0].employees[0].lastName; // missing lastName
 
       expect(validator.isValid(invalidOrg, "Organization")).toBe(false);
     });
   });
+
+  // ============================================================================================
+  // NULLABILITY AND OPTIONALITY
+  // ============================================================================================
+
+  /*
+  Verifies handling of nullable and optional schema members:
+  - nullable fields accepting null
+  - non-nullable fields rejecting null
+  - omitted vs undefined optional members
+  */
 
   describe("Nullability and Optionality", () => {
     test("should accept Product with null optional field", () => {
@@ -645,7 +782,7 @@ describe("Tests for the SchemaValidator class", () => {
     test("should reject null in non-nullable fields", () => {
       const invalidPost = structuredClone(testData.blogPost);
 
-      invalidPost.title = null;  // not nullable
+      invalidPost.title = null; // not nullable
 
       expect(validator.isValid(invalidPost, "BlogPost")).toBe(false);
     });
@@ -653,7 +790,7 @@ describe("Tests for the SchemaValidator class", () => {
     test("should handle missing field", () => {
       const postWithUndefined = structuredClone(testData.blogPost);
 
-      delete postWithUndefined.author.bio;  // not required
+      delete postWithUndefined.author.bio; // not required
 
       expect(validator.isValid(postWithUndefined, "BlogPost")).toBe(true);
     });
@@ -661,12 +798,21 @@ describe("Tests for the SchemaValidator class", () => {
     test("should handle undefined as missing field", () => {
       const postWithUndefined = structuredClone(testData.blogPost);
 
-      postWithUndefined.author.bio = undefined;  // not required, should be treated as missing
+      postWithUndefined.author.bio = undefined; // not required, should be treated as missing
 
       expect(validator.isValid(postWithUndefined, "BlogPost")).toBe(true);
     });
-
   });
+
+  // ============================================================================================
+  // OBJECT SEMANTICS
+  // ============================================================================================
+
+  /*
+  Verifies object-level OpenAPI semantics:
+  - readOnly fields remaining valid when present
+  - additionalProperties allow/deny behavior
+  */
 
   describe("Object Semantics", () => {
     test("should accept Product with readOnly field present", () => {
@@ -698,6 +844,17 @@ describe("Tests for the SchemaValidator class", () => {
       expect(validator.isValid(productWithExtraField, "StrictProduct")).toBe(false);
     });
   });
+
+  // ============================================================================================
+  // VALIDATION REPORTING
+  // ============================================================================================
+
+  /*
+  Verifies the shape and quality of validateWithErrors output:
+  - valid vs invalid result contract
+  - schema-not-found reporting
+  - detailed error object properties
+  */
 
   describe("Validation Reporting", () => {
     test("should return detailed errors for invalid Product", () => {
@@ -772,6 +929,17 @@ describe("Tests for the SchemaValidator class", () => {
     });
   });
 
+  // ============================================================================================
+  // STRESS AND EDGE BEHAVIOR
+  // ============================================================================================
+
+  /*
+  Verifies robustness under large/edge inputs:
+  - larger payload performance within a practical limit
+  - special/unicode character support
+  - larger arrays of valid items
+  */
+
   describe("Stress and Edge Behavior", () => {
     test("should handle large arrays efficiently", () => {
       const bigCorp = structuredClone(testData.organization);
@@ -781,17 +949,22 @@ describe("Tests for the SchemaValidator class", () => {
       has 64 (2^6) employees, resulting in a total of 8192 employees.
       */
 
-      console.assert(bigCorp.departments.length > 0,
-        "testData.organization test data must have at least one department");
-      console.assert(bigCorp.departments[0].employees.length > 0,
-        "testData.organization test data must have at least one employee in the first department");
+      console.assert(
+        bigCorp.departments.length > 0,
+        "testData.organization test data must have at least one department"
+      );
+      console.assert(
+        bigCorp.departments[0].employees.length > 0,
+        "testData.organization test data must have at least one employee in the first department"
+      );
 
       bigCorp.departments = [bigCorp.departments[0]];
       bigCorp.departments[0].employees = [bigCorp.departments[0].employees[0]];
 
       for (let i = 0; i < 6; i++) {
-        bigCorp.departments[0].employees =
-          bigCorp.departments[0].employees.concat(bigCorp.departments[0].employees);
+        bigCorp.departments[0].employees = bigCorp.departments[0].employees.concat(
+          bigCorp.departments[0].employees
+        );
       }
 
       for (let i = 0; i < 7; i++) {
@@ -801,7 +974,7 @@ describe("Tests for the SchemaValidator class", () => {
       const startTime = Date.now();
       const result = validator.isValid(bigCorp, "Organization");
       const endTime = Date.now();
-      const timeLimit = 5000;  // 5 seconds
+      const timeLimit = 5000; // 5 seconds
 
       expect(result).toBe(true);
       expect(endTime - startTime).toBeLessThan(timeLimit);
@@ -827,8 +1000,10 @@ describe("Tests for the SchemaValidator class", () => {
     test("should handle very large arrays", () => {
       const validOrder = structuredClone(testData.orderQuantityOne);
 
-      console.assert(validOrder.items.length > 0,
-        "testData.orderQuantityOne test data must have at least one item");
+      console.assert(
+        validOrder.items.length > 0,
+        "testData.orderQuantityOne test data must have at least one item"
+      );
 
       validOrder.items = Array(1000).fill(structuredClone(validOrder.items[0]));
 
